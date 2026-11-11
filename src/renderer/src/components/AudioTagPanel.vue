@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 音频标签快捷面板：点一下把标签插入文本框光标处。
  * 用户不用背语法，这是相对官方网页 Studio 的一个体验差异点。
@@ -93,7 +93,7 @@ const disabledHint = computed(() =>
 }
 
 .tag-group-title {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   margin-bottom: 5px;
   display: flex;
@@ -102,7 +102,7 @@ const disabledHint = computed(() =>
 }
 
 .tag-badge {
-  font-size: 9.5px;
+  font-size: 12px;
   padding: 0 5px;
   border-radius: 3px;
   background: rgba(255, 180, 84, 0.15);
@@ -121,7 +121,7 @@ const disabledHint = computed(() =>
   border: 1px solid var(--vc-border);
   background: var(--vc-bg-elevated);
   color: var(--vc-text-secondary);
-  font-size: 11.5px;
+  font-size: 12px;
   cursor: pointer;
   font-family: inherit;
   transition:
@@ -146,7 +146,7 @@ const disabledHint = computed(() =>
 }
 
 .tag-hint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   margin: 0;
   line-height: 1.6;

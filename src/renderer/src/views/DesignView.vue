@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 音色设计页（voicedesign 模式）
  *
@@ -639,7 +639,7 @@ async function confirmSave() {
 .notice-text code,
 .hint-banner code {
   font-family: var(--vc-font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
   background: var(--vc-bg-input);
   border: 1px solid var(--vc-border);
   padding: 0 4px;
@@ -682,7 +682,7 @@ async function confirmSave() {
 }
 
 .req {
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
@@ -690,7 +690,7 @@ async function confirmSave() {
 }
 
 .count {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
@@ -720,7 +720,7 @@ async function confirmSave() {
 }
 
 .lib-badge {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -732,7 +732,7 @@ async function confirmSave() {
 }
 
 .collapse-arrow {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   transition: transform var(--vc-dur-fast) var(--vc-ease);
 }
@@ -775,7 +775,7 @@ async function confirmSave() {
 }
 
 .lib-sub {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   line-height: 1.65;
   margin: 10px 0;
@@ -823,7 +823,7 @@ async function confirmSave() {
 
 .lib-fill {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-accent);
   opacity: 0;
   transition: opacity 0.12s;
@@ -834,12 +834,12 @@ async function confirmSave() {
 }
 
 .lib-item-desc {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-secondary);
 }
 
 .lib-preview {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   line-height: 1.6;
   white-space: pre-wrap;
@@ -872,7 +872,7 @@ async function confirmSave() {
 }
 
 .dim-hint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-muted);
 }
 
@@ -889,7 +889,7 @@ async function confirmSave() {
   border: 1px solid var(--vc-border);
   background: var(--vc-bg-elevated);
   color: var(--vc-text-secondary);
-  font-size: 11.5px;
+  font-size: 12px;
   font-family: inherit;
   cursor: pointer;
   transition:
@@ -940,7 +940,7 @@ async function confirmSave() {
 
 .hint-banner {
   margin-top: 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-info);
   background: var(--vc-bg-input);
   border: 1px solid var(--vc-border);
@@ -1024,7 +1024,7 @@ async function confirmSave() {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--vc-text-secondary);
   margin-bottom: 6px;
@@ -1032,7 +1032,7 @@ async function confirmSave() {
 
 .preview-tag {
   font-family: var(--vc-font-mono);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--vc-text-muted);
   background: var(--vc-bg-elevated);

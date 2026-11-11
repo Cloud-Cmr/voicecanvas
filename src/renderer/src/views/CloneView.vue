@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 音色克隆页（voiceclone 模式）
  *
@@ -521,7 +521,7 @@ async function confirmSave() {
 .notice-text code,
 .cap-table code {
   font-family: var(--vc-font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
   background: var(--vc-bg-input);
   border: 1px solid var(--vc-border);
   padding: 0 4px;
@@ -564,7 +564,7 @@ async function confirmSave() {
 }
 
 .req {
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
@@ -572,7 +572,7 @@ async function confirmSave() {
 }
 
 .count {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
@@ -623,7 +623,7 @@ async function confirmSave() {
 }
 
 .drop-sub {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   margin-top: 3px;
 }
@@ -648,7 +648,7 @@ async function confirmSave() {
 }
 
 .file-info {
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -757,7 +757,7 @@ async function confirmSave() {
 }
 
 .progress-sub {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   line-height: 1.6;
   margin-top: 3px;
@@ -805,7 +805,7 @@ async function confirmSave() {
 
 /* ---------- 伦理提示 ---------- */
 .ethics {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   line-height: 1.8;
   margin: 0;
@@ -817,7 +817,7 @@ async function confirmSave() {
 }
 
 .dialog-sample {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-text-secondary);
   background: var(--vc-bg-input);
   border: 1px solid var(--vc-border);

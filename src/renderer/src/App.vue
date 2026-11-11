@@ -3,11 +3,12 @@ import { ref, computed, onMounted } from 'vue'
 import SynthView from './views/SynthView.vue'
 import DesignView from './views/DesignView.vue'
 import CloneView from './views/CloneView.vue'
+import BatchView from './views/BatchView.vue'
 import VoiceLibraryView from './views/VoiceLibraryView.vue'
 import HistoryView from './views/HistoryView.vue'
 import SettingsView from './views/SettingsView.vue'
 
-type TabKey = 'synth' | 'design' | 'clone' | 'voices' | 'history' | 'settings'
+type TabKey = 'synth' | 'design' | 'clone' | 'batch' | 'voices' | 'history' | 'settings'
 
 interface NavItem {
   key: TabKey
@@ -19,6 +20,7 @@ const navItems: NavItem[] = [
   { key: 'synth', label: '语音合成', desc: '预置音色快速出稿' },
   { key: 'design', label: '音色设计', desc: '用文字创造新声音' },
   { key: 'clone', label: '音色克隆', desc: '用样本复刻音色' },
+  { key: 'batch', label: '批量工作台', desc: '台词表一键批量生成' },
   { key: 'voices', label: '我的音色', desc: '已保存的音色资产' },
   { key: 'history', label: '生成历史', desc: '最近生成过的音频' },
   { key: 'settings', label: '设置', desc: 'API 与输出选项' },
@@ -128,6 +130,7 @@ async function onKeySaved() {
         <SynthView v-if="active === 'synth'" @need-key="go('settings')" />
         <DesignView v-else-if="active === 'design'" @need-key="go('settings')" />
         <CloneView v-else-if="active === 'clone'" @need-key="go('settings')" />
+        <BatchView v-else-if="active === 'batch'" @need-key="go('settings')" />
         <VoiceLibraryView v-else-if="active === 'voices'" @use-voice="go('synth')" />
         <HistoryView v-else-if="active === 'history'" />
         <SettingsView v-else-if="active === 'settings'" @saved="onKeySaved" />
@@ -213,7 +216,7 @@ async function onKeySaved() {
 }
 
 .brand-en {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -274,7 +277,7 @@ async function onKeySaved() {
 }
 
 .nav-desc {
-  font-size: 10.5px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -299,13 +302,13 @@ async function onKeySaved() {
   color: var(--vc-warning);
   border-radius: var(--vc-radius-sm);
   padding: 7px 10px;
-  font-size: 11.5px;
+  font-size: 12px;
   cursor: pointer;
   text-align: center;
 }
 
 .version {
-  font-size: 10.5px;
+  font-size: 12px;
   text-align: center;
 }
 

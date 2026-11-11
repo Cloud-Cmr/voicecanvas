@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 音色卡片：「我的音色」页的展示单元。
  *
@@ -240,7 +240,7 @@ onBeforeUnmount(() => {
 }
 
 .time {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .desc {

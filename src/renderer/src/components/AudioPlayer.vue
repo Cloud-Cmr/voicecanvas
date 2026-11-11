@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 音频播放器：波形 + 播放控制 + 保存/定位。
  * 三个合成页与历史页共用，保证交互一致。
@@ -115,7 +115,7 @@ async function saveAs() {
 }
 
 .player-meta {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-text-muted);
 }
 
@@ -156,7 +156,7 @@ async function saveAs() {
 
 .time {
   color: var(--vc-text-secondary);
-  font-size: 11.5px;
+  font-size: 12px;
   min-width: 82px;
 }
 
@@ -166,7 +166,7 @@ async function saveAs() {
 }
 
 .file-size {
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .player-err {

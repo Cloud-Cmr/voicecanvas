@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 设置页：API Key、Base URL、模型 ID、输出选项。
  *
@@ -275,7 +275,7 @@ const formatOptions: Array<{ value: AudioFormat; label: string }> = [
 }
 
 .model-list {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   margin: 4px 0 0;
   word-break: break-all;
@@ -301,7 +301,7 @@ const formatOptions: Array<{ value: AudioFormat; label: string }> = [
 }
 
 .model-key {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-muted);
 }
 

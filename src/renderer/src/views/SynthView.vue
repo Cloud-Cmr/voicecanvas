@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 语音合成页（左：正文 / 右：参数）。
  *
@@ -538,7 +538,7 @@ function applyPendingVoice(): void {
 }
 
 .counter {
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .notice {
@@ -581,7 +581,7 @@ function applyPendingVoice(): void {
 }
 
 .opt-hint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-muted);
 }
 
@@ -680,7 +680,7 @@ function applyPendingVoice(): void {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  font-size: 11.5px;
+  font-size: 12px;
   margin-top: 10px;
 }
 

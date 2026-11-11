@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 /**
  * 波形组件：用 Web Audio 解码后画峰值，不依赖 wavesurfer。
  * 所有页面共用，保证波形视觉一致。
@@ -172,7 +172,7 @@ defineExpose({ redraw: draw })
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   background: rgba(18, 21, 28, 0.75);
 }

@@ -8,6 +8,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import type { GenerationRecord, TtsMode } from '../../../shared/types'
 import { MODE_META } from '../composables/useSynth'
 import { formatBytes } from '../composables/usePlayer'
@@ -197,6 +198,19 @@ function rowClassName({ row }: { row: GenerationRecord }): string {
   return playingRecord.value?.id === row.id ? 'row-playing' : ''
 }
 
+const exporting = ref(false)
+async function exportHistory(format: 'csv' | 'json') {
+  exporting.value = true
+  try {
+    const res = await window.vc.history.export(format)
+    if (res) ElMessage.success(`已导出 ${res.count} 条到 ${res.path}`)
+  } catch (e: any) {
+    ElMessage.error(e?.message || '导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -217,6 +231,17 @@ onMounted(load)
         clearable
       />
       <span class="vc-spacer" />
+      <el-dropdown @command="exportHistory">
+        <el-button size="small" :disabled="!records.length">
+          导出清单 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="csv">CSV 表格（Excel 可开）</el-dropdown-item>
+            <el-dropdown-item command="json">JSON 数据（含全部字段）</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <el-button size="small" :loading="loading" @click="load">刷新</el-button>
       <el-button
         size="small"
@@ -381,12 +406,12 @@ onMounted(load)
 }
 
 .time-cell {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-text-secondary);
 }
 
 .fmt {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--vc-text-secondary);
 }
 
@@ -396,7 +421,7 @@ onMounted(load)
 }
 
 .instruction {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--vc-text-muted);
   margin-top: 2px;
   white-space: nowrap;

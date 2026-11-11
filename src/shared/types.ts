@@ -141,11 +141,16 @@ export const IPC = {
   fileSave: 'file:save',
   fileOpenDialog: 'file:openDialog',
   fileReveal: 'file:reveal',
+  fileReadText: 'file:readText',
+  fileWriteText: 'file:writeText',
   voicesList: 'voices:list',
   voicesUpsert: 'voices:upsert',
   voicesRemove: 'voices:remove',
   historyList: 'history:list',
   historyRemove: 'history:remove',
+  historyExport: 'history:export',
+  batchRun: 'batch:run',
+  batchCancel: 'batch:cancel',
   probeModels: 'probe:models',
 } as const
 
@@ -155,3 +160,67 @@ export interface StreamProgressEvent {
   receivedBytes: number
   elapsedMs: number
 }
+
+// ===== 批量合成 =====
+
+/** 批量队列中的一条任务 */
+export interface BatchTask {
+  /** 客户端生成的唯一 ID */
+  id: string
+  /** 台词序号（从导入文件或手输顺序而来） */
+  index: number
+  /** 待合成文本 */
+  text: string
+  /** 音色 ID：预置音色 ID 或 VoiceAsset.id */
+  voiceKey: string
+  /** 音色显示名（用于结果列表） */
+  voiceLabel: string
+  status: 'pending' | 'running' | 'done' | 'failed' | 'skipped'
+  /** 失败原因 */
+  error?: string
+  /** 生成文件路径 */
+  filePath?: string
+  bytes?: number
+  elapsedMs?: number
+  /** 已重试次数 */
+  attempts: number
+}
+
+/** 批量任务源 */
+export interface BatchSource {
+  kind: 'preset' | 'asset'
+  /** preset 时为音色 ID；asset 时为 VoiceAsset.id */
+  voiceKey: string
+  label: string
+  /** asset 时的克隆样本路径（主进程据此解析样本） */
+  samplePath?: string
+  /** asset 时的设计描述词 */
+  designPrompt?: string
+}
+
+/** 批量运行配置 */
+export interface BatchRunRequest {
+  tasks: Array<Pick<BatchTask, 'id' | 'index' | 'text'>>
+  source: BatchSource
+  instruction?: string
+  format: AudioFormat
+  /** 并发数 1-3（官方限流，太高会 429） */
+  concurrency: number
+}
+
+/** 批量进度事件（主进程 → 渲染进程） */
+export interface BatchProgressEvent {
+  /** 任务 ID */
+  id: string
+  status: BatchTask['status']
+  error?: string
+  filePath?: string
+  bytes?: number
+  elapsedMs?: number
+  /** 已完成任务数 */
+  doneCount: number
+  total: number
+}
+
+/** 历史导出格式 */
+export type ExportFormat = 'csv' | 'json'

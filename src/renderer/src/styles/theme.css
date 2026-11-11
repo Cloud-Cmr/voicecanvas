@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    声绘 VoiceCanvas — 设计基线
    所有页面统一使用这里的变量与原子类，不要在组件里写死颜色。
    ============================================================ */
@@ -23,9 +23,9 @@
   --vc-scope: #6fd3c7;
   --vc-scope-soft: rgba(111, 211, 199, 0.12);
 
-  /* 语义色 */
+  /* 语义色：warning 与 accent 色相差拉开到 ≥15°（better-colors 规则） */
   --vc-danger: #ff7070;
-  --vc-warning: #ffb454;
+  --vc-warning: #f5dd3a;
   --vc-info: #6db3ff;
 
   /* 文字 */
@@ -83,15 +83,13 @@ body {
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
-  user-select: none;
+  /* 文本保持可选中（better-typography：user-select:none 只允许出现在拖拽表面） */
 }
 
-/* 允许在文本区域选中 */
-input,
-textarea,
-.vc-selectable {
-  user-select: text;
+button {
+  user-select: none;
 }
 
 /* ---------- 滚动条 ---------- */
@@ -158,6 +156,13 @@ textarea,
 .vc-mono {
   font-family: var(--vc-font-mono);
   font-size: 12px;
+  /* 时间码/计数器数字等宽，避免跳动（better-typography） */
+  font-variant-numeric: tabular-nums;
+}
+
+/* 动态数值（进度、耗时、用量）统一等宽数字 */
+.vc-num {
+  font-variant-numeric: tabular-nums;
 }
 
 .vc-row {
@@ -197,7 +202,7 @@ textarea,
   gap: 4px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   background: var(--vc-accent-soft);
   color: var(--vc-accent);

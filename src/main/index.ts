@@ -30,6 +30,8 @@ import {
   DEFAULT_MODELS,
   DEFAULT_BASE_URL,
 } from './providers/mimo'
+import { runBatch, cancelBatch, parseSrt, parseTxt } from './batch'
+import type { BatchRunRequest, ExportFormat } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -70,9 +72,10 @@ function createWindow(): void {
     minWidth: 1040,
     minHeight: 680,
     show: false,
-    backgroundColor: '#0f1115',
+    backgroundColor: '#131417',
     autoHideMenuBar: true,
     title: '声绘 VoiceCanvas',
+    icon: path.join(process.env.VITE_DEV_SERVER_URL ? process.cwd() : __dirname, '../../build/icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -245,6 +248,81 @@ function registerIpc(): void {
   ipcMain.handle(IPC.fileSave, async (_e, src: string, target: string) => {
     await fs.copyFile(src, target)
     return { ok: true }
+  })
+
+  // ===== 批量合成 =====
+  ipcMain.handle(IPC.fileReadText, async (_e, filePath: string) => {
+    // 仅允许读取文本类扩展名，防止任意文件读取被滥用
+    const ext = path.extname(filePath).toLowerCase()
+    if (!['.txt', '.srt', '.lrc', '.md', '.csv'].includes(ext)) {
+      throw new Error('仅支持读取 txt / srt / lrc / md / csv 文本文件')
+    }
+    return fs.readFile(filePath, 'utf8')
+  })
+
+  /** 文本文件选择对话框（供批量导入 SRT/TXT 用） */
+  ipcMain.handle('file:openTextDialog', async () => {
+    const res = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        { name: '台词/字幕文件', extensions: ['txt', 'srt', 'lrc', 'md', 'csv'] },
+      ],
+    })
+    if (res.canceled || !res.filePaths[0]) return null
+    const p = res.filePaths[0]
+    return { path: p, name: path.basename(p) }
+  })
+
+  ipcMain.handle(IPC.fileWriteText, async (_e, filePath: string, content: string) => {
+    await fs.writeFile(filePath, content, 'utf8')
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.batchRun, async (event, req: BatchRunRequest) => {
+    return runBatch(req, {
+      send: (channel, payload) => {
+        if (!event.sender.isDestroyed()) event.sender.send(channel, payload)
+      },
+    })
+  })
+
+  ipcMain.handle(IPC.batchCancel, (_e, jobId: string) => {
+    return { ok: cancelBatch(jobId) }
+  })
+
+  ipcMain.handle(IPC.historyExport, async (_e, format: ExportFormat) => {
+    const records = await listHistory()
+    const res = await dialog.showSaveDialog({
+      defaultPath: `voicecanvas-history-${new Date().toISOString().slice(0, 10)}.${format}`,
+      filters:
+        format === 'csv'
+          ? [{ name: 'CSV 表格', extensions: ['csv'] }]
+          : [{ name: 'JSON 数据', extensions: ['json'] }],
+    })
+    if (res.canceled || !res.filePath) return null
+
+    if (format === 'json') {
+      await fs.writeFile(res.filePath, JSON.stringify(records, null, 2), 'utf8')
+    } else {
+      // CSV 带 BOM，Excel 打开不乱码
+      const header = '时间,模式,音色,文本,文件路径,大小(字节),格式,prompt_tokens,completion_tokens'
+      const esc = (s: string) => `"${String(s ?? '').replace(/"/g, '""')}"`
+      const rows = records.map((r) =>
+        [
+          new Date(r.createdAt).toLocaleString('zh-CN'),
+          r.mode,
+          esc(r.voiceName || ''),
+          esc(r.text),
+          esc(r.filePath),
+          r.bytes,
+          r.format,
+          r.usage?.promptTokens ?? '',
+          r.usage?.completionTokens ?? '',
+        ].join(','),
+      )
+      await fs.writeFile(res.filePath, '\ufeff' + [header, ...rows].join('\r\n'), 'utf8')
+    }
+    return { path: res.filePath, count: records.length }
   })
 
   ipcMain.handle(IPC.fileReveal, async (_e, target: string) => {
