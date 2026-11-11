@@ -138,11 +138,15 @@ async function saveAs() {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.12s;
+  transition: transform var(--vc-dur-fast) var(--vc-ease);
 }
 
 .play-btn:hover:not(:disabled) {
   transform: scale(1.06);
+}
+
+.play-btn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .play-btn:disabled {

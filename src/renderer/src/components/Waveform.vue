@@ -18,8 +18,9 @@ const props = withDefaults(
     currentTime: 0,
     duration: 0,
     height: 64,
-    color: '#2f3849',
-    progressColor: '#3ddc97',
+    // 未播放部分是示波器冷青的暗调，播放过头显琥珀主色（呼应录音棚主题）
+    color: '#2b3a3d',
+    progressColor: '#e8a849',
   },
 )
 

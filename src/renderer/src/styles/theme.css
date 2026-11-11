@@ -4,41 +4,54 @@
    ============================================================ */
 
 :root {
-  /* 背景层次：up 越浅越靠前 */
-  --vc-bg-base: #0f1115;
-  --vc-bg-panel: #161922;
-  --vc-bg-elevated: #1d212c;
-  --vc-bg-hover: #232836;
-  --vc-bg-input: #12151c;
+  /* 背景层次：up 越浅越靠前。
+     色相偏暖的深灰蓝（录音棚深夜氛围），刻意避开纯近黑 #0B0B0B 的 AI 默认 */
+  --vc-bg-base: #131417;
+  --vc-bg-panel: #1a1c21;
+  --vc-bg-elevated: #21242b;
+  --vc-bg-hover: #282c35;
+  --vc-bg-input: #16181d;
 
-  /* 主色：声波青绿，避免和 Element 默认蓝撞车 */
-  --vc-accent: #3ddc97;
-  --vc-accent-dim: #2aa876;
-  --vc-accent-soft: rgba(61, 220, 151, 0.12);
-  --vc-accent-glow: rgba(61, 220, 151, 0.35);
+  /* 主色：琥珀铜（VU 表指针 / 电子管暖光），
+     依据题材选色——录音设备的表盘与暖光，而非通用科技绿 */
+  --vc-accent: #e8a849;
+  --vc-accent-dim: #b98634;
+  --vc-accent-soft: rgba(232, 168, 73, 0.13);
+  --vc-accent-glow: rgba(232, 168, 73, 0.3);
+
+  /* 辅助色：示波器冷青，只在数据/波形处点缀，与琥珀形成冷暖对比 */
+  --vc-scope: #6fd3c7;
+  --vc-scope-soft: rgba(111, 211, 199, 0.12);
 
   /* 语义色 */
-  --vc-danger: #ff6b6b;
+  --vc-danger: #ff7070;
   --vc-warning: #ffb454;
-  --vc-info: #5aa9ff;
+  --vc-info: #6db3ff;
 
   /* 文字 */
-  --vc-text-primary: #e8ecf3;
-  --vc-text-secondary: #9aa4b8;
-  --vc-text-muted: #5f6678;
-  --vc-text-inverse: #0f1115;
+  --vc-text-primary: #ecebe6;
+  --vc-text-secondary: #a3a099;
+  --vc-text-muted: #6b6963;
+  --vc-text-inverse: #131417;
 
-  /* 边框与圆角 */
-  --vc-border: #262c3a;
-  --vc-border-strong: #333b4d;
+  /* 边框与圆角：层级化圆角——控件 4 / 容器 8 / 大面板 12，
+     拒绝「所有层级同一个 radius」的 SaaS 卡片默认 */
+  --vc-border: #2a2c33;
+  --vc-border-strong: #3a3d46;
+  --vc-radius-xs: 4px;
   --vc-radius-sm: 6px;
-  --vc-radius-md: 10px;
-  --vc-radius-lg: 14px;
+  --vc-radius-md: 8px;
+  --vc-radius-lg: 12px;
 
-  /* 阴影 */
-  --vc-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --vc-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --vc-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+  /* 阴影只负责海拔，边框负责结构（better-ui 规则 3） */
+  --vc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --vc-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --vc-shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.5);
+
+  /* 动效刻度（better-ui 精确值） */
+  --vc-ease: cubic-bezier(0.2, 0, 0, 1);
+  --vc-dur-fast: 150ms;
+  --vc-dur-med: 300ms;
 
   /* 间距刻度 */
   --vc-gap-xs: 4px;
@@ -50,9 +63,6 @@
   /* 字体 */
   --vc-font: 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
   --vc-font-mono: 'Cascadia Code', 'Consolas', monospace;
-
-  /* 补上被写错的变量 */
-  --vc-text-muted: #5f6678;
 }
 
 * {
@@ -246,8 +256,8 @@ textarea,
 .el-button--primary {
   --el-button-bg-color: var(--vc-accent);
   --el-button-border-color: var(--vc-accent);
-  --el-button-hover-bg-color: #4ef0a8;
-  --el-button-hover-border-color: #4ef0a8;
+  --el-button-hover-bg-color: #f2bd6d;
+  --el-button-hover-border-color: #f2bd6d;
   --el-button-text-color: var(--vc-text-inverse);
   font-weight: 600;
 }
@@ -324,5 +334,21 @@ textarea,
 @keyframes vc-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* ---------- 无障碍：尊重系统「减少动态效果」偏好（better-ui HIGH 规则） ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .vc-pulsing {
+    animation: none;
+    opacity: 0.7;
   }
 }

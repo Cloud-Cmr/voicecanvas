@@ -734,7 +734,7 @@ async function confirmSave() {
 .collapse-arrow {
   font-size: 11px;
   color: var(--vc-text-muted);
-  transition: transform 0.16s;
+  transition: transform var(--vc-dur-fast) var(--vc-ease);
 }
 
 .collapse-arrow.open {
@@ -756,7 +756,10 @@ async function confirmSave() {
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.12s;
+  transition:
+    border-color var(--vc-dur-fast) var(--vc-ease),
+    color var(--vc-dur-fast) var(--vc-ease),
+    background-color var(--vc-dur-fast) var(--vc-ease);
 }
 
 .lib-tab:hover {
@@ -797,7 +800,9 @@ async function confirmSave() {
   color: var(--vc-text-primary);
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.12s;
+  transition:
+    border-color var(--vc-dur-fast) var(--vc-ease),
+    background-color var(--vc-dur-fast) var(--vc-ease);
 }
 
 .lib-item:hover {
@@ -887,7 +892,10 @@ async function confirmSave() {
   font-size: 11.5px;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.12s;
+  transition:
+    border-color var(--vc-dur-fast) var(--vc-ease),
+    color var(--vc-dur-fast) var(--vc-ease),
+    background-color var(--vc-dur-fast) var(--vc-ease);
 }
 
 .chip:hover {

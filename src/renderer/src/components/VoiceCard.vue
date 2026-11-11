@@ -166,9 +166,9 @@ onBeforeUnmount(() => {
   box-shadow: var(--vc-shadow-sm);
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+    border-color var(--vc-dur-fast) var(--vc-ease),
+    box-shadow var(--vc-dur-fast) var(--vc-ease),
+    transform var(--vc-dur-fast) var(--vc-ease);
 }
 
 .voice-card:hover {

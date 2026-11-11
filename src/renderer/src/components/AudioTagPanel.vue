@@ -124,13 +124,20 @@ const disabledHint = computed(() =>
   font-size: 11.5px;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.12s;
+  transition:
+    border-color var(--vc-dur-fast) var(--vc-ease),
+    color var(--vc-dur-fast) var(--vc-ease),
+    background-color var(--vc-dur-fast) var(--vc-ease);
 }
 
 .tag-chip:hover:not(:disabled) {
   border-color: var(--vc-accent);
   color: var(--vc-accent);
   background: var(--vc-accent-soft);
+}
+
+.tag-chip:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .tag-chip:disabled {

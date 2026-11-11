@@ -13,16 +13,15 @@ interface NavItem {
   key: TabKey
   label: string
   desc: string
-  icon: string
 }
 
 const navItems: NavItem[] = [
-  { key: 'synth', label: '语音合成', desc: '预置音色快速出稿', icon: '🎙️' },
-  { key: 'design', label: '音色设计', desc: '用文字创造新声音', icon: '🎨' },
-  { key: 'clone', label: '音色克隆', desc: '用样本复刻音色', icon: '🧬' },
-  { key: 'voices', label: '我的音色', desc: '已保存的音色资产', icon: '📚' },
-  { key: 'history', label: '生成历史', desc: '最近生成过的音频', icon: '🕘' },
-  { key: 'settings', label: '设置', desc: 'API 与输出选项', icon: '⚙️' },
+  { key: 'synth', label: '语音合成', desc: '预置音色快速出稿' },
+  { key: 'design', label: '音色设计', desc: '用文字创造新声音' },
+  { key: 'clone', label: '音色克隆', desc: '用样本复刻音色' },
+  { key: 'voices', label: '我的音色', desc: '已保存的音色资产' },
+  { key: 'history', label: '生成历史', desc: '最近生成过的音频' },
+  { key: 'settings', label: '设置', desc: 'API 与输出选项' },
 ]
 
 const active = ref<TabKey>('synth')
@@ -73,7 +72,35 @@ async function onKeySaved() {
           :class="{ active: active === item.key }"
           @click="go(item.key)"
         >
-          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-icon">
+            <!-- 16px 线性图标，1.5 描边随字重，currentColor 随状态着色 -->
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="none"
+                 stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <template v-if="item.key === 'synth'">
+                <path d="M3 6.5v3" /><path d="M6 4.5v7" /><path d="M9.5 3v10" /><path d="M13 6v4" />
+              </template>
+              <template v-else-if="item.key === 'design'">
+                <path d="M8 1.8c-3.4 0-6.2 2.8-6.2 6.2 0 3.4 2.8 6.2 6.2 6.2.9 0 1.5-.6 1.5-1.4 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.6-1.4 1.4-1.4h1.6c1.4 0 2.5-1.1 2.5-2.4C14.2 4 11.4 1.8 8 1.8Z" />
+                <circle cx="5" cy="6" r="0.9" fill="currentColor" stroke="none" />
+                <circle cx="8.5" cy="4.6" r="0.9" fill="currentColor" stroke="none" />
+              </template>
+              <template v-else-if="item.key === 'clone'">
+                <rect x="5.5" y="5.5" width="8.5" height="8.5" rx="2" />
+                <path d="M10.5 2.5h-6a2 2 0 0 0-2 2v6" />
+              </template>
+              <template v-else-if="item.key === 'voices'">
+                <path d="M2.5 4.5A1.5 1.5 0 0 1 4 3h2.4l1.4 1.8H12a1.5 1.5 0 0 1 1.5 1.5v5.2A1.5 1.5 0 0 1 12 13H4a1.5 1.5 0 0 1-1.5-1.5V4.5Z" />
+              </template>
+              <template v-else-if="item.key === 'history'">
+                <circle cx="8" cy="8" r="6" />
+                <path d="M8 4.8V8l2.3 1.6" />
+              </template>
+              <template v-else>
+                <circle cx="8" cy="8" r="2.2" />
+                <path d="M8 1.8v1.9M8 12.3v1.9M1.8 8h1.9M12.3 8h1.9M3.6 3.6l1.4 1.4M11 11l1.4 1.4M12.4 3.6 11 5M5 11l-1.4 1.4" />
+              </template>
+            </svg>
+          </span>
           <span class="nav-body">
             <span class="nav-label">{{ item.label }}</span>
             <span class="nav-desc">{{ item.desc }}</span>
@@ -167,8 +194,9 @@ async function onKeySaved() {
 .brand-mark {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--vc-accent), #1f8f63);
+  border-radius: var(--vc-radius-md);
+  /* VU 表指针的琥珀铜渐变，呼应「声绘」把声音画出来的隐喻 */
+  background: linear-gradient(135deg, var(--vc-accent), var(--vc-accent-dim));
   color: var(--vc-text-inverse);
   font-weight: 800;
   font-size: 17px;
@@ -210,8 +238,8 @@ async function onKeySaved() {
   text-align: left;
   color: var(--vc-text-secondary);
   transition:
-    background 0.15s,
-    color 0.15s;
+    background-color var(--vc-dur-fast) var(--vc-ease),
+    color var(--vc-dur-fast) var(--vc-ease);
   font-family: inherit;
 }
 
@@ -226,9 +254,12 @@ async function onKeySaved() {
 }
 
 .nav-icon {
-  font-size: 15px;
   width: 20px;
-  text-align: center;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .nav-body {
