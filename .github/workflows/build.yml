@@ -54,6 +54,9 @@ jobs:
 
       - name: 构建并打包 Windows 产物
         run: npm run dist:win
+        env:
+          # electron-builder 运行时要查 release 元数据，没有这个变量会直接报错退出
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 列出产物（便于排查路径问题）
         shell: pwsh
