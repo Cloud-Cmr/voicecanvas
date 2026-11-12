@@ -167,6 +167,15 @@ const api = {
     models: (): Promise<{ ok: boolean; models?: string[]; message?: string }> =>
       ipcRenderer.invoke(IPC.probeModels),
   },
+  projects: {
+    list: (): Promise<any[]> => ipcRenderer.invoke(IPC.projectList),
+    get: (id: string): Promise<any | null> => ipcRenderer.invoke(IPC.projectGet, id),
+    save: (input: any): Promise<any> => ipcRenderer.invoke(IPC.projectSave, input),
+    remove: (id: string): Promise<void> => ipcRenderer.invoke(IPC.projectDelete, id),
+    importFile: (): Promise<any | null> => ipcRenderer.invoke(IPC.projectImport),
+    exportFile: (id: string, name: string): Promise<{ ok: boolean; path?: string; canceled?: boolean }> =>
+      ipcRenderer.invoke(IPC.projectExport, id, name),
+  },
   llm: {
     /** 把粗糙想法润色成专业音色描述 */
     polishDescription: (idea: string): Promise<string> =>

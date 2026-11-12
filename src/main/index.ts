@@ -35,6 +35,14 @@ import { concatWavs, buildTimelineWav, type TimelineItem } from './wav'
 import { trimEdges, normalizePeak, capSilence, applyGain, getWavInfo } from './audiofx'
 import { fadeInOut, changeSpeed } from './audiofx2'
 import { exportBatch } from './exporter'
+import {
+  listProjects,
+  getProject,
+  saveProject,
+  deleteProject,
+  importProjectFile,
+  exportProjectFile,
+} from './projects'
 import { transcribe } from './providers/asr'
 import { listStyles, saveStyle, removeStyle } from './styles'
 import type {
@@ -122,6 +130,35 @@ function createWindow(): void {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
+  }
+
+  // 开发用：VC_SHOT=页面名 启动时自动切页截图后退出（IPC 全部可用，反映真实状态）
+  if (process.env.VC_SHOT) {
+    mainWindow.webContents.once('did-finish-load', async () => {
+      const label = process.env.VC_SHOT!
+      await new Promise((r) => setTimeout(r, 1800))
+      try {
+        await mainWindow!.webContents.executeJavaScript(`
+          (async () => {
+            const label = ${JSON.stringify(label)};
+            const btns = Array.from(document.querySelectorAll('.nav-item'));
+            const btn = btns.find(b => (b.textContent || '').includes(label));
+            if (btn) btn.click();
+            await new Promise(r => setTimeout(r, 900));
+          })()
+        `)
+        await new Promise((r) => setTimeout(r, 1000))
+        const img = await mainWindow!.webContents.capturePage()
+        const dir = path.join(app.getAppPath(), 'screenshots')
+        await fs.mkdir(dir, { recursive: true })
+        const key = process.env.VC_SHOT_KEY || 'shot'
+        await fs.writeFile(path.join(dir, `shot-${key}.png`), img.toPNG())
+        console.log(`SHOT_SAVED: shot-${key}.png`)
+      } catch (e) {
+        console.error('SHOT_FAILED', e)
+      }
+      app.quit()
+    })
   }
 }
 
@@ -445,6 +482,37 @@ function registerIpc(): void {
     } catch (e: any) {
       return { ok: false, message: e?.message || String(e) }
     }
+  })
+
+  // ===== 项目工作区 =====
+  ipcMain.handle(IPC.projectList, () => listProjects())
+  ipcMain.handle(IPC.projectGet, (_e, id: string) => getProject(id))
+  ipcMain.handle(IPC.projectSave, (_e, input: any) => saveProject(input))
+  ipcMain.handle(IPC.projectDelete, (_e, id: string) => deleteProject(id))
+
+  ipcMain.handle(IPC.projectImport, async () => {
+    const res = await dialog.showOpenDialog({
+      title: '导入项目文件',
+      properties: ['openFile'],
+      filters: [{ name: '声绘项目', extensions: ['json'] }],
+    })
+    if (res.canceled || !res.filePaths[0]) return null
+    try {
+      return await importProjectFile(res.filePaths[0])
+    } catch (e: any) {
+      throw new Error(e?.message || '导入失败')
+    }
+  })
+
+  ipcMain.handle(IPC.projectExport, async (_e, id: string, name: string) => {
+    const res = await dialog.showSaveDialog({
+      title: '导出项目文件',
+      defaultPath: `${name || '项目'}.vcpj.json`,
+      filters: [{ name: '声绘项目', extensions: ['json'] }],
+    })
+    if (res.canceled || !res.filePath) return { ok: false, canceled: true }
+    const ok = await exportProjectFile(id, res.filePath)
+    return { ok, path: res.filePath }
   })
 
   ipcMain.handle(IPC.batchRun, async (event, req: BatchRunRequest) => {

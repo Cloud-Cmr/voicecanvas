@@ -165,6 +165,12 @@ export const IPC = {
   audioProcess: 'audio:process',
   audioInfo: 'audio:info',
   exportAudioPack: 'export:audioPack',
+  projectList: 'project:list',
+  projectGet: 'project:get',
+  projectSave: 'project:save',
+  projectDelete: 'project:delete',
+  projectImport: 'project:import',
+  projectExport: 'project:export',
   timelineProgress: 'synth:timelineProgress',
 } as const
 

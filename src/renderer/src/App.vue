@@ -6,6 +6,7 @@ import CloneView from './views/CloneView.vue'
 import BatchView from './views/BatchView.vue'
 import TimelineView from './views/TimelineView.vue'
 import CompareView from './views/CompareView.vue'
+import ProjectView from './views/ProjectView.vue'
 import TranscriptView from './views/TranscriptView.vue'
 import VoiceLibraryView from './views/VoiceLibraryView.vue'
 import HistoryView from './views/HistoryView.vue'
@@ -19,6 +20,7 @@ type TabKey =
   | 'batch'
   | 'timeline'
   | 'compare'
+  | 'projects'
   | 'transcript'
   | 'voices'
   | 'history'
@@ -37,6 +39,7 @@ const navItems: NavItem[] = [
   { key: 'batch', label: '批量工作台', desc: '台词表一键批量生成' },
   { key: 'timeline', label: '时间戳配音', desc: '按时间点摆声音出 LRC' },
   { key: 'compare', label: '音色对比', desc: '一段文本听多个音色' },
+  { key: 'projects', label: '项目工作区', desc: '多次配音集中管理' },
   { key: 'transcript', label: '听写转写', desc: '音频转文字（ASR）' },
   { key: 'voices', label: '我的音色', desc: '已保存的音色资产' },
   { key: 'history', label: '生成历史', desc: '最近生成过的音频' },
