@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, Tray, Menu } from 'electron'
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import { randomUUID } from 'node:crypto'
@@ -33,7 +33,9 @@ import {
 import { runBatch, cancelBatch, parseSrt, parseTxt } from './batch'
 import { polishVoiceDescription, generateSampleText, DEFAULT_LLM_MODEL } from './providers/llm'
 import { concatWavs } from './wav'
-import type { BatchRunRequest, ExportFormat } from '../shared/types'
+import { transcribe } from './providers/asr'
+import { listStyles, saveStyle, removeStyle } from './styles'
+import type { AsrResponse, BatchRunRequest, ExportFormat, StylePreset } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -86,6 +88,16 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => mainWindow?.show())
+
+  // 批量任务运行期间点关闭 → 隐藏到托盘，任务不中断
+  mainWindow.on('close', (e) => {
+    const quitting = (app as any).isQuitting === true
+    if (batchRunningCount > 0 && !quitting && tray) {
+      e.preventDefault()
+      mainWindow?.hide()
+      mainWindow?.webContents.send('batch:hidden', true)
+    }
+  })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -297,11 +309,16 @@ function registerIpc(): void {
   })
 
   ipcMain.handle(IPC.batchRun, async (event, req: BatchRunRequest) => {
-    return runBatch(req, {
-      send: (channel, payload) => {
-        if (!event.sender.isDestroyed()) event.sender.send(channel, payload)
-      },
-    })
+    setBatchRunning(true)
+    try {
+      return await runBatch(req, {
+        send: (channel, payload) => {
+          if (!event.sender.isDestroyed()) event.sender.send(channel, payload)
+        },
+      })
+    } finally {
+      setBatchRunning(false)
+    }
   })
 
   ipcMain.handle(IPC.batchCancel, (_e, jobId: string) => {
@@ -328,6 +345,45 @@ function registerIpc(): void {
       baseUrl: settings.baseUrl ?? undefined,
     })
   })
+
+  // ===== ASR 转写 =====
+  ipcMain.handle(
+    IPC.asrTranscribe,
+    async (_e, payload: { path: string }): Promise<AsrResponse> => {
+      try {
+        const apiKey = await getApiKey()
+        if (!apiKey) return { ok: false, code: 'E_NO_KEY', message: '尚未配置 API Key' }
+        const settings = await getSettings()
+        const buf = await fs.readFile(payload.path)
+        const ext = path.extname(payload.path).toLowerCase()
+        const format: 'wav' | 'mp3' = ext === '.mp3' ? 'mp3' : 'wav'
+        const r = await transcribe(buf, format, {
+          apiKey,
+          baseUrl: settings.baseUrl ?? undefined,
+        })
+        return {
+          ok: true,
+          text: r.text,
+          seconds: r.seconds,
+          audioTokens: r.usage?.audioTokens,
+          totalTokens: r.usage?.totalTokens,
+          elapsedMs: r.elapsedMs,
+        }
+      } catch (err: any) {
+        if (err instanceof TtsError) {
+          return { ok: false, code: err.code, message: err.message }
+        }
+        return { ok: false, code: 'E_UNKNOWN', message: err?.message || String(err) }
+      }
+    },
+  )
+
+  // ===== 风格方案 =====
+  ipcMain.handle(IPC.styleList, () => listStyles())
+  ipcMain.handle(IPC.styleSave, (_e, input: Omit<StylePreset, 'id' | 'createdAt'> & { id?: string }) =>
+    saveStyle(input),
+  )
+  ipcMain.handle(IPC.styleRemove, (_e, id: string) => removeStyle(id))
 
   // ===== 长文本分段合成：多段按序合成 + WAV 拼接 =====
   ipcMain.handle(IPC.synthRunLong, async (event, base: SynthRequest, segments: string[]) => {
@@ -459,6 +515,7 @@ app.whenReady().then(() => {
   registerMediaProtocol()
   registerIpc()
   createWindow()
+  createTray()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -467,5 +524,46 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
+
+// ===== 托盘：批量任务跑批时关窗口 = 隐藏到托盘继续干活 =====
+let tray: Tray | null = null
+let batchRunningCount = 0
+
+// 托盘「退出」或系统关机时的正常退出标记
+app.on('before-quit', () => {
+  ;(app as any).isQuitting = true
+})
+
+function createTray(): void {
+  try {
+    const iconPath = path.join(process.resourcesPath || '', 'icon.ico')
+    const fallback = path.join(app.getAppPath(), 'build', 'icon.ico')
+    const icon = require('node:fs').existsSync(iconPath) ? iconPath : fallback
+    tray = new Tray(icon)
+  } catch {
+    return
+  }
+  tray.setToolTip('声绘 VoiceCanvas')
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: '显示主窗口', click: () => mainWindow?.show() },
+      { type: 'separator' },
+      {
+        label: '退出',
+        click: () => {
+          tray = null
+          app.quit()
+        },
+      },
+    ]),
+  )
+  tray.on('double-click', () => mainWindow?.show())
+}
+
+/** 批量引擎运行时改判关闭行为：有任务 → 隐藏到托盘；否则正常退出 */
+export function setBatchRunning(running: boolean): void {
+  batchRunningCount += running ? 1 : -1
+  if (batchRunningCount < 0) batchRunningCount = 0
+}
 
 export { PRESET_VOICES, DEFAULT_MODELS, DEFAULT_BASE_URL }

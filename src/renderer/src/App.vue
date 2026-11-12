@@ -4,11 +4,20 @@ import SynthView from './views/SynthView.vue'
 import DesignView from './views/DesignView.vue'
 import CloneView from './views/CloneView.vue'
 import BatchView from './views/BatchView.vue'
+import TranscriptView from './views/TranscriptView.vue'
 import VoiceLibraryView from './views/VoiceLibraryView.vue'
 import HistoryView from './views/HistoryView.vue'
 import SettingsView from './views/SettingsView.vue'
 
-type TabKey = 'synth' | 'design' | 'clone' | 'batch' | 'voices' | 'history' | 'settings'
+type TabKey =
+  | 'synth'
+  | 'design'
+  | 'clone'
+  | 'batch'
+  | 'transcript'
+  | 'voices'
+  | 'history'
+  | 'settings'
 
 interface NavItem {
   key: TabKey
@@ -21,6 +30,7 @@ const navItems: NavItem[] = [
   { key: 'design', label: '音色设计', desc: '用文字创造新声音' },
   { key: 'clone', label: '音色克隆', desc: '用样本复刻音色' },
   { key: 'batch', label: '批量工作台', desc: '台词表一键批量生成' },
+  { key: 'transcript', label: '听写转写', desc: '音频转文字（ASR）' },
   { key: 'voices', label: '我的音色', desc: '已保存的音色资产' },
   { key: 'history', label: '生成历史', desc: '最近生成过的音频' },
   { key: 'settings', label: '设置', desc: 'API 与输出选项' },
@@ -131,6 +141,7 @@ async function onKeySaved() {
         <DesignView v-else-if="active === 'design'" @need-key="go('settings')" />
         <CloneView v-else-if="active === 'clone'" @need-key="go('settings')" />
         <BatchView v-else-if="active === 'batch'" @need-key="go('settings')" />
+        <TranscriptView v-else-if="active === 'transcript'" @need-key="go('settings')" />
         <VoiceLibraryView v-else-if="active === 'voices'" @use-voice="go('synth')" />
         <HistoryView v-else-if="active === 'history'" />
         <SettingsView v-else-if="active === 'settings'" @saved="onKeySaved" />

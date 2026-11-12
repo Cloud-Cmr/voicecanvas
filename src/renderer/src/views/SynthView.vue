@@ -10,8 +10,8 @@
  * 这样用户不必为了复用一个音色再跑去另一个页面重填一遍。
  */
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import type { AudioFormat, SynthRequest, TtsMode, VoiceAsset } from '../../../shared/types'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import type { AudioFormat, StylePreset, SynthRequest, TtsMode, VoiceAsset } from '../../../shared/types'
 import { PRESET_VOICES } from '../../../shared/constants'
 import { useSynth, FORMAT_OPTIONS, MODE_META } from '../composables/useSynth'
 import { formatBytes } from '../composables/usePlayer'
@@ -28,6 +28,56 @@ const { loading, error, result, receivedBytes, runningMs, humanElapsed, finalTex
 const text = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const instruction = ref('')
+
+/* ---------------- 风格方案 ---------------- */
+
+const styles = ref<StylePreset[]>([])
+const saveStyleOpen = ref(false)
+const styleName = ref('')
+const styleNote = ref('')
+
+async function loadStyles() {
+  styles.value = await window.vc.styles.list()
+}
+
+async function saveStyleNow() {
+  const name = styleName.value.trim()
+  if (!name) {
+    ElMessage.warning('给方案起个名字')
+    return
+  }
+  const voiceLabel =
+    voiceGroups.value.flatMap((g) => g.options).find((o) => o.value === selectedVoice.value)?.label ||
+    selectedVoice.value
+  await window.vc.styles.save({
+    name,
+    voiceKey: selectedVoice.value,
+    voiceLabel,
+    instruction: instruction.value.trim() || undefined,
+    note: styleNote.value.trim() || undefined,
+  })
+  styleName.value = ''
+  styleNote.value = ''
+  saveStyleOpen.value = false
+  await loadStyles()
+  ElMessage.success(`方案「${name}」已保存`)
+}
+
+async function applyStyle(s: StylePreset) {
+  // 找到对应音色并选中；找不到（已删）则只套指令
+  const exists = voiceGroups.value.flatMap((g) => g.options).some((o) => o.value === s.voiceKey)
+  if (exists) {
+    selectedVoice.value = s.voiceKey
+  } else {
+    ElMessage.warning(`方案里的音色「${s.voiceLabel}」已不存在，只套用风格指令`)
+  }
+  instruction.value = s.instruction || ''
+}
+
+async function removeStyleById(id: string) {
+  await window.vc.styles.remove(id)
+  await loadStyles()
+}
 const format = ref<AudioFormat>('wav')
 const stream = ref(false)
 
@@ -362,6 +412,7 @@ const showSlowHint = computed(() => canStream.value && stream.value)
 onMounted(async () => {
   await refreshKeyState()
   await loadAssets()
+  await loadStyles()
   applyPendingVoice()
 })
 
@@ -455,7 +506,11 @@ function applyPendingVoice(): void {
             当前模式：<span :class="modeMeta.tag">{{ modeMeta.label }}</span>
           </p>
 
-          <label class="vc-label">风格指令（可空）</label>
+          <label class="vc-label">
+            风格指令（可空）
+            <span class="vc-spacer" style="display: inline-flex; flex: 1" />
+            <el-button link size="small" @click="saveStyleOpen = true">存为方案</el-button>
+          </label>
           <el-input
             v-model="instruction"
             :disabled="instructionDisabled"
@@ -465,6 +520,19 @@ function applyPendingVoice(): void {
             show-word-limit
             placeholder="例如：语速稍慢，语气温柔一些"
           />
+
+          <!-- 风格方案快捷条 -->
+          <div v-if="styles.length" class="style-strip">
+            <button
+              v-for="s in styles.slice(0, 6)"
+              :key="s.id"
+              class="style-chip"
+              :title="`${s.voiceLabel}${s.instruction ? '：' + s.instruction : ''}`"
+              @click="applyStyle(s)"
+            >
+              {{ s.name }}
+            </button>
+          </div>
           <p class="vc-hint">{{ instructionHint }}</p>
 
           <label class="vc-label">输出格式</label>
@@ -556,6 +624,24 @@ function applyPendingVoice(): void {
         </div>
       </section>
     </div>
+
+    <!-- 保存风格方案 -->
+    <el-dialog v-model="saveStyleOpen" title="保存为风格方案" width="440px">
+      <label class="vc-label">方案名</label>
+      <el-input v-model="styleName" maxlength="20" placeholder="例如：晚安电台" />
+      <label class="vc-label" style="margin-top: 12px">备注（可空）</label>
+      <el-input v-model="styleNote" maxlength="60" placeholder="这个方案适合什么场景" />
+      <p class="vc-hint" style="margin-top: 10px">
+        将保存：音色「{{
+          voiceGroups.flatMap((g) => g.options).find((o) => o.value === selectedVoice)?.label ||
+          selectedVoice
+        }}」+ 当前风格指令。
+      </p>
+      <template #footer>
+        <el-button @click="saveStyleOpen = false">取消</el-button>
+        <el-button type="primary" @click="saveStyleNow">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -778,4 +864,32 @@ function applyPendingVoice(): void {
   color: var(--vc-text-secondary);
   user-select: text;
 }
-</style>
+
+/* ---------- 风格方案快捷条 ---------- */
+.style-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.style-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--vc-border);
+  background: var(--vc-bg-elevated);
+  color: var(--vc-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color var(--vc-dur-fast) var(--vc-ease),
+    color var(--vc-dur-fast) var(--vc-ease),
+    background-color var(--vc-dur-fast) var(--vc-ease);
+}
+
+.style-chip:hover {
+  border-color: var(--vc-accent);
+  color: var(--vc-accent);
+  background: var(--vc-accent-soft);
+}</style>

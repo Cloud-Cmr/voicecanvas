@@ -2,10 +2,12 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/types'
 import type {
   AppSettings,
+  AsrResponse,
   BatchProgressEvent,
   BatchRunRequest,
   BatchTask,
   GenerationRecord,
+  StylePreset,
   SynthRequest,
   SynthResponse,
   VoiceAsset,
@@ -115,6 +117,18 @@ const api = {
     /** 根据音色描述生成适配的合成文本 */
     generateSampleText: (description: string): Promise<string> =>
       ipcRenderer.invoke(IPC.llmSampleText, description),
+  },
+  asr: {
+    /** 语音转文字（mimo-v2.5-asr），传本地音频绝对路径 */
+    transcribe: (filePath: string): Promise<AsrResponse> =>
+      ipcRenderer.invoke(IPC.asrTranscribe, { path: filePath }),
+  },
+  styles: {
+    list: (): Promise<StylePreset[]> => ipcRenderer.invoke(IPC.styleList),
+    save: (
+      input: Omit<StylePreset, 'id' | 'createdAt'> & { id?: string },
+    ): Promise<StylePreset> => ipcRenderer.invoke(IPC.styleSave, input),
+    remove: (id: string): Promise<void> => ipcRenderer.invoke(IPC.styleRemove, id),
   },
 }
 

@@ -156,6 +156,10 @@ export const IPC = {
   llmPolish: 'llm:polishDescription',
   llmSampleText: 'llm:generateSampleText',
   llmSplitText: 'llm:splitLongText',
+  asrTranscribe: 'asr:transcribe',
+  styleList: 'style:list',
+  styleSave: 'style:save',
+  styleRemove: 'style:remove',
 } as const
 
 /** 主进程 → 渲染进程的流式进度事件 */
@@ -228,3 +232,32 @@ export interface BatchProgressEvent {
 
 /** 历史导出格式 */
 export type ExportFormat = 'csv' | 'json'
+
+// ===== 风格方案 =====
+
+/** 一套「音色 + 风格指令」的组合，可命名保存、一键套用 */
+export interface StylePreset {
+  id: string
+  name: string
+  /** preset 音色 ID 或 asset:<uuid> */
+  voiceKey: string
+  voiceLabel: string
+  instruction?: string
+  /** 备注说明（可选） */
+  note?: string
+  createdAt: number
+}
+
+// ===== ASR 转写 =====
+
+export interface AsrResponse {
+  ok: boolean
+  text?: string
+  /** 音频时长（秒） */
+  seconds?: number
+  audioTokens?: number
+  totalTokens?: number
+  elapsedMs?: number
+  code?: string
+  message?: string
+}
