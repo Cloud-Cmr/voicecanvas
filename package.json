@@ -1,6 +1,6 @@
 {
   "name": "voicecanvas",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "??? VoiceCanvas ???????AI ?????????????????? MiMo TTS",
   "private": true,
   "main": "./out/main/index.js",
@@ -13,12 +13,18 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "dist:win": "electron-vite build && electron-builder --win"
+    "dist:win": "electron-vite build && electron-builder --win",
+    "build:mobile": "vite build --config vite.mobile.config.ts",
+    "apk": "npm run build:mobile && node scripts/prepare-apk.mjs && cd android && gradlew.bat assembleDebug",
+    "apk:sync": "npm run build:mobile && npx cap sync android"
   },
   "dependencies": {
     "electron-updater": "^6.6.2"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.2.3",
+    "@capacitor/cli": "^6.2.3",
+    "@capacitor/core": "^6.2.3",
     "@types/node": "^22.10.2",
     "@vitejs/plugin-vue": "^5.2.1",
     "electron": "^33.2.1",
@@ -47,11 +53,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },

@@ -1,68 +1,87 @@
-﻿/* ============================================================
+/* ============================================================
    声绘 VoiceCanvas — 设计基线
    所有页面统一使用这里的变量与原子类，不要在组件里写死颜色。
    ============================================================ */
 
 :root {
-  /* 背景层次：up 越浅越靠前。
-     色相偏暖的深灰蓝（录音棚深夜氛围），刻意避开纯近黑 #0B0B0B 的 AI 默认 */
-  --vc-bg-base: #131417;
-  --vc-bg-panel: #1a1c21;
-  --vc-bg-elevated: #21242b;
-  --vc-bg-hover: #282c35;
-  --vc-bg-input: #16181d;
+  /* ── 背景层次 ────────────────────────────────────────────
+     不是简单的「越浅越前」，而是带极轻微色相偏移的四层：
+     底层偏冷灰（深夜房间），越往上越暖（靠近灯光）。
+     这种做法比单纯的明度阶梯更耐看，也更难被识别为模板。 */
+  --vc-bg-base: #0f1013;
+  --vc-bg-panel: #16181c;
+  --vc-bg-elevated: #1d2026;
+  --vc-bg-hover: #24282f;
+  --vc-bg-input: #121419;
+  --vc-bg-sunken: #0b0c0f;
 
-  /* 主色：琥珀铜（VU 表指针 / 电子管暖光），
-     依据题材选色——录音设备的表盘与暖光，而非通用科技绿 */
-  --vc-accent: #e8a849;
-  --vc-accent-dim: #b98634;
-  --vc-accent-soft: rgba(232, 168, 73, 0.13);
-  --vc-accent-glow: rgba(232, 168, 73, 0.3);
+  /* ── 主色：琥珀铜 ────────────────────────────────────────
+     VU 表指针与电子管暖光。只在「需要被看见的动作」上用，
+     不拿来刷大面积背景——这是去 AI 味的关键之一。 */
+  --vc-accent: #e6a94f;
+  --vc-accent-bright: #f2bd6d;
+  --vc-accent-dim: #a97c33;
+  --vc-accent-soft: rgba(230, 169, 79, 0.1);
+  --vc-accent-line: rgba(230, 169, 79, 0.32);
+  --vc-accent-glow: rgba(230, 169, 79, 0.28);
 
-  /* 辅助色：示波器冷青，只在数据/波形处点缀，与琥珀形成冷暖对比 */
+  /* ── 辅助：示波器冷青 ────────────────────────────────────
+     只在数据可视化（波形、进度、时长）出现，与琥珀冷暖对照。 */
   --vc-scope: #6fd3c7;
-  --vc-scope-soft: rgba(111, 211, 199, 0.12);
+  --vc-scope-soft: rgba(111, 211, 199, 0.1);
+  --vc-scope-line: rgba(111, 211, 199, 0.28);
 
-  /* 语义色：warning 与 accent 色相差拉开到 ≥15°（better-colors 规则） */
-  --vc-danger: #ff7070;
-  --vc-warning: #f5dd3a;
-  --vc-info: #6db3ff;
+  /* ── 语义色 ──────────────────────────────────────────────*/
+  --vc-danger: #f0736e;
+  --vc-warning: #e8c94a;
+  --vc-info: #6aa8f0;
 
-  /* 文字 */
-  --vc-text-primary: #ecebe6;
-  --vc-text-secondary: #a3a099;
-  --vc-text-muted: #6b6963;
+  /* ── 文字 ──────────────────────────────────────────────
+     不用纯白（刺眼），最高层级用带一点暖的米白。 */
+  --vc-text-primary: #e9e7e2;
+  --vc-text-secondary: #9b9890;
+  --vc-text-muted: #6a6862;
+  --vc-text-faint: #4a4844;
   --vc-text-inverse: #131417;
 
-  /* 边框与圆角：层级化圆角——控件 4 / 容器 8 / 大面板 12，
-     拒绝「所有层级同一个 radius」的 SaaS 卡片默认 */
-  --vc-border: #2a2c33;
-  --vc-border-strong: #3a3d46;
+  /* ── 线条 ──────────────────────────────────────────────
+     三级：hairline 用于分隔，border 用于容器，strong 用于悬停/聚焦。 */
+  --vc-hairline: rgba(255, 255, 255, 0.06);
+  --vc-border: #262a31;
+  --vc-border-strong: #363b45;
+
+  /* ── 圆角：层级化 ──────────────────────────────────────*/
   --vc-radius-xs: 4px;
-  --vc-radius-sm: 6px;
-  --vc-radius-md: 8px;
-  --vc-radius-lg: 12px;
+  --vc-radius-sm: 7px;
+  --vc-radius-md: 10px;
+  --vc-radius-lg: 14px;
+  --vc-radius-xl: 18px;
 
-  /* 阴影只负责海拔，边框负责结构（better-ui 规则 3） */
-  --vc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --vc-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
-  --vc-shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.5);
+  /* ── 阴影：海拔靠阴影，结构靠边框 ──────────────────────*/
+  --vc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --vc-shadow-md: 0 3px 10px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --vc-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35);
+  /* 内发光：让输入框在深色里有一点点"凹进去"的物理感 */
+  --vc-inset: inset 0 1px 2px rgba(0, 0, 0, 0.5);
 
-  /* 动效刻度（better-ui 精确值） */
+  /* ── 动效 ──────────────────────────────────────────────*/
   --vc-ease: cubic-bezier(0.2, 0, 0, 1);
-  --vc-dur-fast: 150ms;
-  --vc-dur-med: 300ms;
+  --vc-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --vc-dur-fast: 140ms;
+  --vc-dur-med: 260ms;
 
-  /* 间距刻度 */
+  /* ── 间距 ──────────────────────────────────────────────*/
   --vc-gap-xs: 4px;
   --vc-gap-sm: 8px;
   --vc-gap-md: 16px;
   --vc-gap-lg: 24px;
   --vc-gap-xl: 32px;
 
-  /* 字体 */
-  --vc-font: 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
-  --vc-font-mono: 'Cascadia Code', 'Consolas', monospace;
+  /* ── 字体 ──────────────────────────────────────────────
+     中文用系统无衬线的较新版本；数字与代码用等宽以便对齐。 */
+  --vc-font: 'Segoe UI Variable Display', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei',
+    system-ui, sans-serif;
+  --vc-font-mono: 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
 }
 
 * {
@@ -111,42 +130,57 @@ button {
 
 /* ---------- 通用原子类 ---------- */
 .vc-page {
-  padding: var(--vc-gap-lg);
+  padding: var(--vc-gap-lg) var(--vc-gap-xl);
   height: 100%;
   overflow-y: auto;
 }
 
+/* 卡片：用极轻的顶部高光模拟"被灯照到"的物理感，
+   而不是靠粗边框或大阴影。这是去 AI 味的细节之一。 */
 .vc-card {
+  position: relative;
   background: var(--vc-bg-panel);
   border: 1px solid var(--vc-border);
   border-radius: var(--vc-radius-md);
-  padding: var(--vc-gap-md);
-  box-shadow: var(--vc-shadow-sm);
+  padding: var(--vc-gap-md) var(--vc-gap-lg);
+  box-shadow: var(--vc-shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.028);
 }
 
+/* 卡片标题：不用全大写（AI 模板味最重的做法之一），
+   改用中等字号 + 字重 + 左侧短竖线作为层级标记 */
 .vc-card-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--vc-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 13.5px;
+  font-weight: 620;
+  color: var(--vc-text-primary);
+  letter-spacing: 0;
   margin: 0 0 var(--vc-gap-md);
   display: flex;
   align-items: center;
   gap: var(--vc-gap-sm);
 }
 
+.vc-card-title::before {
+  content: '';
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--vc-accent);
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
 .vc-title {
   font-size: 20px;
   font-weight: 650;
   margin: 0 0 var(--vc-gap-xs);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
 }
 
 .vc-subtitle {
   color: var(--vc-text-secondary);
   font-size: 13px;
   margin: 0 0 var(--vc-gap-lg);
+  line-height: 1.6;
 }
 
 .vc-muted {
@@ -228,24 +262,36 @@ button {
 }
 
 /* ---------- Element Plus 深色覆盖 ---------- */
+/* 输入框：凹感（内阴影）+ 悬停提亮 + 聚焦琥珀描边。
+   聚焦时给极轻的外发光，让"正在输入"这件事有存在感。 */
 .el-input__wrapper,
 .el-textarea__inner,
 .el-select__wrapper {
   background-color: var(--vc-bg-input) !important;
-  box-shadow: 0 0 0 1px var(--vc-border) inset !important;
+  box-shadow:
+    0 0 0 1px var(--vc-border) inset,
+    var(--vc-inset) !important;
   border-radius: var(--vc-radius-sm) !important;
+  transition:
+    box-shadow var(--vc-dur-fast) var(--vc-ease),
+    background-color var(--vc-dur-fast) var(--vc-ease);
 }
 
 .el-input__wrapper:hover,
 .el-textarea__inner:hover,
 .el-select__wrapper:hover {
-  box-shadow: 0 0 0 1px var(--vc-border-strong) inset !important;
+  box-shadow:
+    0 0 0 1px var(--vc-border-strong) inset,
+    var(--vc-inset) !important;
 }
 
 .el-input__wrapper.is-focus,
 .el-textarea__inner:focus,
 .el-select__wrapper.is-focused {
-  box-shadow: 0 0 0 1px var(--vc-accent) inset !important;
+  box-shadow:
+    0 0 0 1px var(--vc-accent) inset,
+    0 0 0 3px var(--vc-accent-soft),
+    var(--vc-inset) !important;
 }
 
 .el-input__inner,
@@ -255,20 +301,36 @@ button {
 
 .el-textarea__inner {
   font-family: var(--vc-font);
-  line-height: 1.7;
+  line-height: 1.75;
+  padding: 12px 14px !important;
 }
 
+/* 主按钮：琥珀填充 + 极轻内高光，按下不位移只缩小（better-ui 0.96） */
 .el-button--primary {
   --el-button-bg-color: var(--vc-accent);
   --el-button-border-color: var(--vc-accent);
-  --el-button-hover-bg-color: #f2bd6d;
-  --el-button-hover-border-color: #f2bd6d;
-  --el-button-text-color: var(--vc-text-inverse);
-  font-weight: 600;
+  --el-button-hover-bg-color: var(--vc-accent-bright);
+  --el-button-hover-border-color: var(--vc-accent-bright);
+  --el-button-text-color: #1a1408;
+  font-weight: 620;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.el-button--primary:not(.is-disabled):active {
+  transform: scale(0.96);
 }
 
 .el-button {
   border-radius: var(--vc-radius-sm);
+  transition:
+    background-color var(--vc-dur-fast) var(--vc-ease),
+    border-color var(--vc-dur-fast) var(--vc-ease),
+    color var(--vc-dur-fast) var(--vc-ease),
+    transform var(--vc-dur-fast) var(--vc-ease);
+}
+
+.el-button:not(.is-disabled):active {
+  transform: scale(0.97);
 }
 
 .el-popper.is-light {
@@ -356,4 +418,11 @@ button {
     animation: none;
     opacity: 0.7;
   }
+}
+
+/* ---------- 键盘可达性：统一可见焦点环（better-interface HIGH 触发器） ---------- */
+:focus-visible {
+  outline: 2px solid var(--vc-accent);
+  outline-offset: 2px;
+  border-radius: var(--vc-radius-xs);
 }

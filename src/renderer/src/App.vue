@@ -4,6 +4,7 @@ import SynthView from './views/SynthView.vue'
 import DesignView from './views/DesignView.vue'
 import CloneView from './views/CloneView.vue'
 import BatchView from './views/BatchView.vue'
+import TimelineView from './views/TimelineView.vue'
 import TranscriptView from './views/TranscriptView.vue'
 import VoiceLibraryView from './views/VoiceLibraryView.vue'
 import HistoryView from './views/HistoryView.vue'
@@ -14,6 +15,7 @@ type TabKey =
   | 'design'
   | 'clone'
   | 'batch'
+  | 'timeline'
   | 'transcript'
   | 'voices'
   | 'history'
@@ -30,6 +32,7 @@ const navItems: NavItem[] = [
   { key: 'design', label: '音色设计', desc: '用文字创造新声音' },
   { key: 'clone', label: '音色克隆', desc: '用样本复刻音色' },
   { key: 'batch', label: '批量工作台', desc: '台词表一键批量生成' },
+  { key: 'timeline', label: '时间戳配音', desc: '按时间点摆声音出 LRC' },
   { key: 'transcript', label: '听写转写', desc: '音频转文字（ASR）' },
   { key: 'voices', label: '我的音色', desc: '已保存的音色资产' },
   { key: 'history', label: '生成历史', desc: '最近生成过的音频' },
@@ -122,9 +125,9 @@ async function onKeySaved() {
 
       <div class="sidebar-foot">
         <div v-if="!hasApiKey" class="warn-chip" @click="go('settings')">
-          ⚠ 未配置 API Key
+          未配置 API Key
         </div>
-        <div class="version vc-muted">v0.1.0 · MiMo 适配</div>
+        <div class="version vc-muted">v0.5.0</div>
       </div>
     </aside>
 
@@ -141,6 +144,7 @@ async function onKeySaved() {
         <DesignView v-else-if="active === 'design'" @need-key="go('settings')" />
         <CloneView v-else-if="active === 'clone'" @need-key="go('settings')" />
         <BatchView v-else-if="active === 'batch'" @need-key="go('settings')" />
+        <TimelineView v-else-if="active === 'timeline'" @need-key="go('settings')" />
         <TranscriptView v-else-if="active === 'transcript'" @need-key="go('settings')" />
         <VoiceLibraryView v-else-if="active === 'voices'" @use-voice="go('synth')" />
         <HistoryView v-else-if="active === 'history'" />
@@ -208,28 +212,30 @@ async function onKeySaved() {
 .brand-mark {
   width: 34px;
   height: 34px;
-  border-radius: var(--vc-radius-md);
+  border-radius: var(--vc-radius-sm);
   /* VU 表指针的琥珀铜渐变，呼应「声绘」把声音画出来的隐喻 */
-  background: linear-gradient(135deg, var(--vc-accent), var(--vc-accent-dim));
-  color: var(--vc-text-inverse);
-  font-weight: 800;
-  font-size: 17px;
+  background: linear-gradient(150deg, var(--vc-accent-bright), var(--vc-accent-dim));
+  color: #1a1408;
+  font-weight: 700;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 16px var(--vc-accent-glow);
+  box-shadow:
+    0 0 20px var(--vc-accent-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .brand-name {
   font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 650;
+  letter-spacing: 0.06em;
 }
 
 .brand-en {
-  font-size: 12px;
-  color: var(--vc-text-muted);
-  letter-spacing: 0.12em;
+  font-size: 11.5px;
+  color: var(--vc-text-faint);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
@@ -241,6 +247,7 @@ async function onKeySaved() {
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -262,9 +269,23 @@ async function onKeySaved() {
   color: var(--vc-text-primary);
 }
 
+/* 选中态：左侧短竖条 + 极淡底色。
+   比整块高亮更克制，也不会盖住图标本身。 */
 .nav-item.active {
   background: var(--vc-accent-soft);
   color: var(--vc-accent);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 16px;
+  border-radius: 0 2px 2px 0;
+  background: var(--vc-accent);
 }
 
 .nav-icon {
@@ -274,6 +295,12 @@ async function onKeySaved() {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.nav-item.active .nav-icon,
+.nav-item:hover .nav-icon {
+  opacity: 1;
 }
 
 .nav-body {
@@ -284,12 +311,13 @@ async function onKeySaved() {
 
 .nav-label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 550;
+  letter-spacing: 0.01em;
 }
 
 .nav-desc {
-  font-size: 12px;
-  color: var(--vc-text-muted);
+  font-size: 11.5px;
+  color: var(--vc-text-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

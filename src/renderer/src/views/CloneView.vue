@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 /**
  * 音色克隆页（voiceclone 模式）
  *
@@ -15,6 +15,7 @@ import type { AudioFormat, VoiceAsset } from '../../../shared/types'
 import { CLONE_SAMPLE_MAX_BYTES } from '../../../shared/constants'
 import { useSynth, FORMAT_OPTIONS } from '../composables/useSynth'
 import { formatBytes } from '../composables/usePlayer'
+import { useRecorder, formatDuration } from '../composables/useRecorder'
 import AudioPlayer from '../components/AudioPlayer.vue'
 
 const emit = defineEmits<{ (e: 'need-key'): void }>()
@@ -134,6 +135,28 @@ function clearSample() {
   sampleName.value = ''
   sampleBytes.value = 0
   sampleError.value = ''
+}
+
+// ---------- 录音 ----------
+const recorder = useRecorder()
+const recording = computed(() => recorder.recording.value)
+
+async function startRecording() {
+  sampleError.value = ''
+  const ok = await recorder.start()
+  if (!ok && recorder.error.value) {
+    ElMessage.error(recorder.error.value)
+  }
+}
+
+async function stopRecording() {
+  const res = await recorder.stop()
+  if (!res) {
+    if (recorder.error.value) ElMessage.error(recorder.error.value)
+    return
+  }
+  applySample({ path: res.path, name: res.name, bytes: res.bytes })
+  ElMessage.success(`录音已保存（${res.seconds} 秒），可直接用来克隆`)
 }
 
 // ---------- 表单 ----------
@@ -288,13 +311,47 @@ async function confirmSave() {
           </div>
 
           <div class="drop-actions">
-            <el-button size="small" type="primary" plain @click="pickSample">
-              选择文件…（系统对话框）
+            <el-button
+              v-if="!recording && !recorder.converting.value"
+              size="small"
+              type="primary"
+              @click="startRecording"
+            >
+              直接录音
+            </el-button>
+            <el-button v-if="recording" size="small" type="danger" @click="stopRecording">
+              停止并保存（{{ formatDuration(recorder.elapsed.value) }}）
+            </el-button>
+            <el-button
+              v-if="recording"
+              size="small"
+              @click="recorder.cancel()"
+            >
+              取消
+            </el-button>
+            <el-button size="small" :disabled="recording" @click="pickSample">
+              选择文件…
             </el-button>
             <el-button v-if="hasSample" size="small" type="danger" plain @click="clearSample">
               移除样本
             </el-button>
           </div>
+
+          <!-- 录音状态 -->
+          <div v-if="recording" class="rec-bar">
+            <span class="rec-dot" />
+            <span class="rec-text">
+              正在录音 {{ formatDuration(recorder.elapsed.value) }} — 请自然地念 10～30 秒
+            </span>
+            <div class="level-meter">
+              <div class="level-fill" :style="{ width: Math.round(recorder.level.value * 100) + '%' }" />
+            </div>
+          </div>
+          <p v-if="recorder.converting.value" class="vc-hint">正在把录音转成 24kHz WAV…</p>
+          <p v-if="recorder.error.value" class="sample-err">{{ recorder.error.value }}</p>
+          <p v-else-if="recording" class="vc-hint">
+            录完后会自动保存为样本并填入下方，可以直接试听、克隆。
+          </p>
 
           <p v-if="sampleError" class="sample-err">{{ sampleError }}</p>
 
@@ -349,7 +406,7 @@ async function confirmSave() {
       <div class="col">
         <section class="vc-card">
           <h3 class="vc-card-title">② 风格指令（可选）</h3>
-          <el-textarea
+          <el-input type="textarea"
             v-model="instruction"
             :rows="3"
             :maxlength="500"
@@ -368,7 +425,7 @@ async function confirmSave() {
             <span class="vc-spacer" />
             <span class="count vc-mono">{{ text.length }} 字</span>
           </h3>
-          <el-textarea
+          <el-input type="textarea"
             v-model="text"
             :rows="9"
             :maxlength="3000"
@@ -825,4 +882,44 @@ async function confirmSave() {
   padding: 8px 10px;
   word-break: break-all;
 }
-</style>
+
+/* ---------- 录音状态条 ---------- */
+.rec-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: var(--vc-radius-sm);
+  background: rgba(255, 112, 112, 0.08);
+  border: 1px solid rgba(255, 112, 112, 0.28);
+}
+
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vc-danger);
+  flex-shrink: 0;
+  animation: vc-pulse 1.2s ease-in-out infinite;
+}
+
+.rec-text {
+  font-size: 12.5px;
+  color: var(--vc-text-primary);
+  flex-shrink: 0;
+}
+
+.level-meter {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--vc-bg-input);
+  overflow: hidden;
+}
+
+.level-fill {
+  height: 100%;
+  background: var(--vc-danger);
+  transition: width 80ms linear;
+}</style>

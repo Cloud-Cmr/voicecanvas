@@ -11,6 +11,11 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  BUILTIN_TEMPLATES,
+  groupTemplates,
+  type BuiltinTemplate,
+} from '../../../shared/templates'
 import type { AudioFormat, VoiceAsset } from '../../../shared/types'
 import { useSynth, MODE_META, FORMAT_OPTIONS } from '../composables/useSynth'
 import AudioPlayer from '../components/AudioPlayer.vue'
@@ -225,6 +230,23 @@ const templateGroups: TemplateGroup[] = [
 
 const activeGroup = ref<string>(templateGroups[0].key)
 const libOpen = ref(true)
+
+// ---------- 内置声音图鉴（原创模板） ----------
+const grouped = groupTemplates()
+const activeGroupName = ref<string>(grouped[0]?.category ?? '夜话')
+const activeItems = computed(() => {
+  const g = grouped.find((x) => x.category === activeGroupName.value)
+  return g?.items ?? []
+})
+
+/** 填入内置模板：描述 + 配套示例文本一起填好 */
+function applyBuiltin(item: BuiltinTemplate) {
+  description.value = item.prompt
+  if (item.sample) text.value = item.sample
+  // 有文本了就不必开智能润色，用户能直接看到会念什么
+  optimize.value = false
+  ElMessage.success(`已填入「${item.name}」，可直接点「设计并合成」试听`)
+}
 const activeGroupMeta = computed(
   () => templateGroups.find((g) => g.key === activeGroup.value) ?? templateGroups[0],
 )
@@ -385,21 +407,15 @@ async function confirmSave() {
 
 <template>
   <div class="vc-page design-page">
-    <!-- 顶部说明条 -->
+    <!-- 顶部说明条：一句话讲清楚，不再写成教程 -->
     <div class="notice-bar">
-      <div class="notice-mark">🎨</div>
-      <div class="notice-body">
-        <div class="notice-title">
-          用一句话，造一个世界上还不存在的声音
-          <span :class="MODE_META.design.tag">音色设计</span>
-        </div>
-        <p class="notice-text">音色设计 ≠ 从预置里挑一个，也 ≠ 复刻一段录音。你写的是对这个声音的<b>描述</b>（年龄、性别、口音、音色质感、情绪、语速），我们把它作为 <code>user</code> 消息发给 <code>voicedesign</code> 模型，模型先生成一个全新音色，再朗读你给的正文。</p>
-        <p class="notice-text">该模式<b>不能指定预置音色</b>（不传 <code>audio.voice</code>）、<b>不支持 (唱歌)</b>，也不是真流式，通常 1～3 秒一次性返回。</p>
-      </div>
+      <p class="notice-line">
+        描述一个你想要的声音，模型会凭空造出它来念你写的稿子。写不清？点「AI 帮写描述」。
+      </p>
     </div>
 
     <div v-if="!hasKey" class="key-warn">
-      <span>⚠ 还没有配置 API Key，生成会失败。</span>
+      <span>还没有配置 API Key，生成会失败。</span>
       <el-button size="small" type="primary" plain @click="emit('need-key')">
         去设置页配置
       </el-button>
@@ -416,7 +432,7 @@ async function confirmSave() {
             <span class="vc-spacer" />
             <span class="count vc-mono">{{ description.length }} 字</span>
           </h3>
-          <el-textarea
+          <el-input type="textarea"
             v-model="description"
             :rows="9"
             :maxlength="1200"
@@ -445,8 +461,8 @@ async function confirmSave() {
         <!-- 描述模板库 -->
         <section class="vc-card">
           <h3 class="vc-card-title lib-head" @click="libOpen = !libOpen">
-            <span>描述模板库</span>
-            <span class="lib-badge">5 类 · 10 例</span>
+            <span>声音图鉴</span>
+            <span class="lib-badge">{{ BUILTIN_TEMPLATES.length }} 种声音</span>
             <span class="vc-spacer" />
             <span class="collapse-arrow" :class="{ open: libOpen }">▾</span>
           </h3>
@@ -454,32 +470,34 @@ async function confirmSave() {
           <div v-show="libOpen" class="lib-body">
             <div class="lib-tabs">
               <button
-                v-for="g in templateGroups"
-                :key="g.key"
+                v-for="g in grouped"
+                :key="g.category"
                 class="lib-tab"
-                :class="{ active: activeGroup === g.key }"
-                @click="activeGroup = g.key"
+                :class="{ active: activeGroup === g.category }"
+                @click="activeGroup = g.category"
               >
-                {{ g.title }}
+                {{ g.category }}
               </button>
             </div>
 
-            <p class="lib-sub">{{ activeGroupMeta.sub }}</p>
+            <p class="lib-sub">点一下就把描述和示例文本都填好，直接点「设计并合成」可试听。</p>
 
             <div class="lib-items">
               <button
-                v-for="item in activeGroupMeta.items"
-                :key="item.key"
-                class="lib-item"
-                :title="`点击填入：${item.title}`"
-                @click="applyTemplate(item)"
+                v-for="item in activeItems"
+                :key="item.id"
+                class="lib-item tpl-card"
+                :title="item.prompt"
+                @click="applyBuiltin(item)"
               >
                 <span class="lib-item-top">
-                  <span class="lib-item-title">{{ item.title }}</span>
-                  <span class="lib-fill">填入 →</span>
+                  <span class="tpl-name">{{ item.name }}</span>
+                  <span class="lib-fill">填入</span>
                 </span>
-                <span class="lib-item-desc">{{ item.desc }}</span>
-                <span class="lib-preview">{{ item.text }}</span>
+                <span class="tpl-tagline">{{ item.tagline }}</span>
+                <span class="tpl-tags">
+                  <span v-for="t in item.tags || []" :key="t" class="tpl-tag">{{ t }}</span>
+                </span>
               </button>
             </div>
           </div>
@@ -538,7 +556,7 @@ async function confirmSave() {
             <el-switch v-model="optimize" />
           </div>
 
-          <el-textarea
+          <el-input type="textarea"
             v-model="text"
             :rows="7"
             :maxlength="3000"
@@ -660,7 +678,7 @@ async function confirmSave() {
         @keyup.enter="confirmSave"
       />
       <label class="vc-label" style="margin-top: 12px">描述（随音色一起保存）</label>
-      <el-textarea :model-value="description" :rows="4" readonly />
+      <el-input type="textarea" :model-value="description" :rows="4" readonly />
       <template #footer>
         <el-button @click="saveDialog = false">取消</el-button>
         <el-button type="primary" :loading="saving" @click="confirmSave">保存</el-button>
@@ -678,55 +696,17 @@ async function confirmSave() {
 
 /* ---------- 顶部说明 ---------- */
 .notice-bar {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  background: var(--vc-bg-panel);
-  border: 1px solid var(--vc-border);
+  background: transparent;
+  border: none;
   border-left: 3px solid var(--vc-info);
-  border-radius: var(--vc-radius-md);
-  padding: 14px 16px;
+  padding: 4px 0 4px 14px;
 }
 
-.notice-mark {
-  font-size: 20px;
-  line-height: 1.2;
-}
-
-.notice-body {
-  min-width: 0;
-}
-
-.notice-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 13.5px;
-  font-weight: 650;
-}
-
-.notice-text {
-  font-size: 12.5px;
+.notice-line {
+  font-size: 13px;
   color: var(--vc-text-secondary);
-  line-height: 1.75;
-  margin: 6px 0 0;
-}
-
-.notice-text b {
-  color: var(--vc-text-primary);
-  font-weight: 600;
-}
-
-.notice-text code,
-.hint-banner code {
-  font-family: var(--vc-font-mono);
-  font-size: 12px;
-  background: var(--vc-bg-input);
-  border: 1px solid var(--vc-border);
-  padding: 0 4px;
-  border-radius: 3px;
-  color: var(--vc-accent);
+  line-height: 1.7;
+  margin: 0;
 }
 
 .key-warn {
@@ -1130,4 +1110,42 @@ async function confirmSave() {
   margin: 0;
   white-space: pre-wrap;
 }
-</style>
+
+/* ---------- 声音图鉴卡片 ---------- */
+.tpl-card {
+  text-align: left;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.tpl-name {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--vc-text-primary);
+  letter-spacing: 0.02em;
+}
+
+.tpl-tagline {
+  font-size: 12px;
+  color: var(--vc-text-secondary);
+  line-height: 1.5;
+  display: block;
+}
+
+.tpl-tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.tpl-tag {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--vc-accent-soft);
+  color: var(--vc-accent);
+}
+
+.lib-item:hover .tpl-name {
+  color: var(--vc-accent);
+}</style>

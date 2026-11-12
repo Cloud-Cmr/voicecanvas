@@ -10,6 +10,9 @@ import type {
   StylePreset,
   SynthRequest,
   SynthResponse,
+  TimelineProgressEvent,
+  TimelineRequest,
+  TimelineResponse,
   VoiceAsset,
 } from '../shared/types'
 
@@ -42,6 +45,15 @@ const api = {
       segments: string[],
     ): Promise<SynthResponse & { segments?: number }> =>
       ipcRenderer.invoke(IPC.synthRunLong, base, segments),
+    /** 时间戳配音：按 [mm:ss] 时间轴逐段合成 + 总轨摆放，输出 WAV + LRC */
+    runTimeline: (req: TimelineRequest): Promise<TimelineResponse> =>
+      ipcRenderer.invoke(IPC.synthTimeline, req),
+    /** 时间轴逐段进度 */
+    onTimelineProgress: (cb: (e: TimelineProgressEvent) => void) => {
+      const handler = (_e: unknown, payload: TimelineProgressEvent) => cb(payload)
+      ipcRenderer.on(IPC.timelineProgress, handler)
+      return () => ipcRenderer.removeListener(IPC.timelineProgress, handler)
+    },
     /** 长文本逐段进度 */
     onLongProgress: (
       cb: (e: { index: number; total: number; elapsedMs: number }) => void,
@@ -71,6 +83,38 @@ const api = {
       ipcRenderer.invoke(IPC.fileReadText, filePath),
     writeText: (filePath: string, content: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke(IPC.fileWriteText, filePath, content),
+    /** 保存录音的 WAV 字节到应用数据目录，返回落盘绝对路径 */
+    saveRecordedAudio: (
+      name: string,
+      bytes: number[],
+    ): Promise<{ ok: boolean; path?: string; bytes?: number; message?: string }> =>
+      ipcRenderer.invoke(IPC.fileSaveRecorded, name, bytes),
+    /** 音频后期处理（去静音/归一/静音上限/增益），产出新文件 */
+    processAudio: (payload: {
+      filePath: string
+      trimEdges?: boolean
+      normalize?: boolean
+      capSilenceMs?: number
+      gainDb?: number
+    }): Promise<{
+      ok: boolean
+      filePath?: string
+      changed?: boolean
+      applied?: string[]
+      before?: { durationMs: number; peakDb: number }
+      after?: { durationMs: number; peakDb: number }
+      message?: string
+    }> => ipcRenderer.invoke(IPC.audioProcess, payload),
+    /** 音频信息：时长、采样率、峰值 */
+    audioInfo: (
+      filePath: string,
+    ): Promise<{
+      ok: boolean
+      durationMs?: number
+      sampleRate?: number
+      peakDb?: number
+      message?: string
+    }> => ipcRenderer.invoke(IPC.audioInfo, filePath),
     /** 打开文本文件选择框（SRT/TXT 台词导入用），返回 {path,name} 或 null */
     openTextDialog: (): Promise<{ path: string; name: string } | null> =>
       ipcRenderer.invoke('file:openTextDialog'),

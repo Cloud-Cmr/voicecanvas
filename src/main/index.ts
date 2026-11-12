@@ -5,7 +5,6 @@ import { randomUUID } from 'node:crypto'
 import { IPC } from '../shared/types'
 import type {
   GenerationRecord,
-  SynthRequest,
   SynthResponse,
   VoiceAsset,
 } from '../shared/types'
@@ -32,10 +31,28 @@ import {
 } from './providers/mimo'
 import { runBatch, cancelBatch, parseSrt, parseTxt } from './batch'
 import { polishVoiceDescription, generateSampleText, DEFAULT_LLM_MODEL } from './providers/llm'
-import { concatWavs } from './wav'
+import { concatWavs, buildTimelineWav, type TimelineItem } from './wav'
+import { trimEdges, normalizePeak, capSilence, applyGain, getWavInfo } from './audiofx'
 import { transcribe } from './providers/asr'
 import { listStyles, saveStyle, removeStyle } from './styles'
-import type { AsrResponse, BatchRunRequest, ExportFormat, StylePreset } from '../shared/types'
+import type {
+  AsrResponse,
+  BatchRunRequest,
+  ExportFormat,
+  StylePreset,
+  SynthRequest,
+  TimelineRequest,
+  TimelineResponse,
+} from '../shared/types'
+
+/** "mm:ss" / "mm:ss.ms" / "hh:mm:ss" → 毫秒 */
+function parseTimeMs(t: string): number {
+  const parts = t.trim().split(':').map((p) => parseFloat(p))
+  if (parts.some((n) => Number.isNaN(n))) return 0
+  if (parts.length === 3) return ((parts[0] * 60 + parts[1]) * 60 + parts[2]) * 1000
+  if (parts.length === 2) return (parts[0] * 60 + parts[1]) * 1000
+  return parts[0] * 1000
+}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -308,6 +325,95 @@ function registerIpc(): void {
     return { ok: true }
   })
 
+  /** 保存录音样本：渲染端转好 WAV 字节数组传过来，落到 samples 目录 */
+  ipcMain.handle(
+    IPC.fileSaveRecorded,
+    async (_e, name: string, bytes: number[]) => {
+      try {
+        const dir = path.join(app.getPath('userData'), 'samples')
+        await fs.mkdir(dir, { recursive: true })
+        // 防路径穿越：只取文件名部分，并把非法字符替换掉
+        const safe = path.basename(name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+        const target = path.join(dir, safe)
+        const buf = Buffer.from(bytes)
+        await fs.writeFile(target, buf)
+        return { ok: true, path: target, bytes: buf.length }
+      } catch (e: any) {
+        return { ok: false, message: e?.message || String(e) }
+      }
+    },
+  )
+
+  /** 音频后期处理：去静音 / 响度归一 / 静音上限 / 增益（产出新文件，不覆盖原件） */
+  ipcMain.handle(
+    IPC.audioProcess,
+    async (
+      _e,
+      payload: {
+        filePath: string
+        trimEdges?: boolean
+        normalize?: boolean
+        capSilenceMs?: number
+        gainDb?: number
+      },
+    ) => {
+      try {
+        const raw = await fs.readFile(payload.filePath)
+        // Buffer<ArrayBufferLike> → Buffer 的宽松类型，audiofx 返回普通 Buffer
+        let out: Buffer = Buffer.from(raw)
+        const applied: string[] = []
+
+        if (payload.trimEdges) {
+          out = trimEdges(out)
+          applied.push('去首尾静音')
+        }
+        if (payload.capSilenceMs && payload.capSilenceMs > 0) {
+          out = capSilence(out, payload.capSilenceMs)
+          applied.push(`静音上限 ${payload.capSilenceMs}ms`)
+        }
+        if (payload.gainDb) {
+          out = applyGain(out, payload.gainDb)
+          applied.push(`增益 ${payload.gainDb > 0 ? '+' : ''}${payload.gainDb}dB`)
+        }
+        if (payload.normalize) {
+          out = normalizePeak(out, -1)
+          applied.push('峰值归一 -1dB')
+        }
+
+        if (out === raw) {
+          return { ok: true, filePath: payload.filePath, changed: false, applied }
+        }
+
+        const dir = path.dirname(payload.filePath)
+        const base = path.basename(payload.filePath, path.extname(payload.filePath))
+        const ext = path.extname(payload.filePath) || '.wav'
+        const target = path.join(dir, `${base}_processed${ext}`)
+        await fs.writeFile(target, out)
+
+        return {
+          ok: true,
+          filePath: target,
+          changed: true,
+          applied,
+          before: getWavInfo(raw),
+          after: getWavInfo(out),
+        }
+      } catch (e: any) {
+        return { ok: false, message: e?.message || String(e) }
+      }
+    },
+  )
+
+  /** 读取音频基本信息（时长、峰值 dB），用于 UI 展示 */
+  ipcMain.handle(IPC.audioInfo, async (_e, filePath: string) => {
+    try {
+      const buf = await fs.readFile(filePath)
+      return { ok: true, ...getWavInfo(buf) }
+    } catch (e: any) {
+      return { ok: false, message: e?.message || String(e) }
+    }
+  })
+
   ipcMain.handle(IPC.batchRun, async (event, req: BatchRunRequest) => {
     setBatchRunning(true)
     try {
@@ -379,6 +485,97 @@ function registerIpc(): void {
   )
 
   // ===== 风格方案 =====
+  ipcMain.handle(IPC.styleList, () => listStyles())
+  ipcMain.handle(IPC.styleSave, (_e, input: Omit<StylePreset, 'id' | 'createdAt'> & { id?: string }) =>
+    saveStyle(input),
+  )
+  ipcMain.handle(IPC.styleRemove, (_e, id: string) => removeStyle(id))
+
+  // ===== 时间戳配音：按 [mm:ss] 时间轴逐段合成 + 总轨摆放 =====
+  ipcMain.handle(
+    IPC.synthTimeline,
+    async (event, req: TimelineRequest): Promise<TimelineResponse> => {
+      const apiKey = await getApiKey()
+      if (!apiKey) return { ok: false, code: 'E_NO_KEY', message: '尚未配置 API Key' }
+      if (!req.cues.length) return { ok: false, code: 'E_EMPTY', message: '没有可合成的台词' }
+      const settings = await getSettings()
+      const started = Date.now()
+
+      try {
+        const items: TimelineItem[] = []
+        const placedStr: string[] = []
+        for (let i = 0; i < req.cues.length; i++) {
+          const cue = req.cues[i]
+          const raw = await synthesize(
+            {
+              mode: 'preset',
+              text: cue.text,
+              instruction: req.instruction,
+              voiceId: req.voiceId || 'mimo_default',
+              format: 'wav',
+            },
+            { apiKey, baseUrl: settings.baseUrl ?? undefined, models: settings.models },
+          )
+          items.push({ audio: raw.audio, offsetMs: parseTimeMs(cue.time) })
+          const placed = items[i]
+          // 实际摆放位置在 buildTimelineWav 里定，这里先给请求时间
+          placedStr.push(cue.time)
+          if (!event.sender.isDestroyed()) {
+            event.sender.send(IPC.timelineProgress, {
+              index: i,
+              total: req.cues.length,
+              placedAt: cue.time,
+              elapsedMs: Date.now() - started,
+            })
+          }
+        }
+
+        const merged = buildTimelineWav(items)
+        const dir = await ensureOutputDir()
+        const stamp = new Date().toISOString().replace(/[:T]/g, '-').replace(/\..+$/, '')
+        const filePath = path.join(dir, `timeline-${stamp}.wav`)
+        await fs.writeFile(filePath, merged.buffer)
+
+        // 同步导出 LRC 字幕（用实际摆放时间）
+        const lrcPath = filePath.replace(/\.wav$/, '.lrc')
+        const lrcLines = req.cues.map((c, i) => {
+          const ms = merged.placedMs[i] ?? 0
+          const m = Math.floor(ms / 60000)
+          const s = Math.floor((ms % 60000) / 1000)
+          const cs = Math.floor((ms % 1000) / 10)
+          return `[${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}]${c.text}`
+        })
+        await fs.writeFile(lrcPath, `[ti:VoiceCanvas 时间戳配音]\n${lrcLines.join('\n')}`, 'utf8')
+
+        await addHistory({
+          id: randomUUID(),
+          mode: 'preset',
+          text: `时间戳配音 ${req.cues.length} 段（${req.cues[0]?.text.slice(0, 30) || ''}…）`,
+          instruction: req.instruction,
+          voiceName: req.voiceId || 'mimo_default',
+          filePath,
+          bytes: merged.buffer.length,
+          format: 'wav',
+          createdAt: Date.now(),
+        })
+
+        return {
+          ok: true,
+          filePath,
+          lrcPath,
+          durationMs: merged.durationMs,
+          placedMs: merged.placedMs,
+        }
+      } catch (err: any) {
+        if (err instanceof TtsError) {
+          return { ok: false, code: err.code, message: err.message }
+        }
+        return { ok: false, code: 'E_UNKNOWN', message: err?.message || String(err) }
+      }
+    },
+  )
+
+  // ===== 风格方案 =====（原位置）
   ipcMain.handle(IPC.styleList, () => listStyles())
   ipcMain.handle(IPC.styleSave, (_e, input: Omit<StylePreset, 'id' | 'createdAt'> & { id?: string }) =>
     saveStyle(input),

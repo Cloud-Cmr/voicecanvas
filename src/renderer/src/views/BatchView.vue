@@ -218,7 +218,7 @@ watch(rawText, (v) => {
           :autosize="{ minRows: 16, maxRows: 26 }"
           placeholder="每行一条台词。也可以点上方「导入 SRT / TXT」自动解析。"
         />
-        <div class="stats">
+        <div v-if="lines.length" class="stats">
           <span class="vc-num">{{ lines.length }} 条</span>
           <span class="vc-muted">·</span>
           <span class="vc-num">{{ totalChars }} 字</span>
@@ -229,6 +229,12 @@ watch(rawText, (v) => {
             导入 SRT / TXT
           </el-button>
           <el-button size="small" :disabled="!rawText" @click="rawText = ''">清空</el-button>
+        </div>
+        <div v-else class="stats">
+          <span class="vc-spacer" />
+          <el-button size="small" :loading="importing" @click="importDialogue">
+            导入 SRT / TXT
+          </el-button>
         </div>
       </section>
 

@@ -94,3 +94,56 @@ export function concatWavs(buffers: Buffer[]): Buffer {
 
   return Buffer.concat([wavHeader(total), ...chunks])
 }
+
+// ===== 时间轴拼接（时间戳配音用）=====
+
+export interface TimelineItem {
+  /** 该段音频（完整 WAV） */
+  audio: Buffer
+  /** 放置到总轨的时间点（毫秒） */
+  offsetMs: number
+}
+
+/**
+ * 时间轴拼接：把每段音频摆到指定时间点，段间静音填充。
+ * 总长 = max(offset + duration)。
+ * 段重叠时保护性顺延到前段结束（避免互相覆盖）。
+ */
+export function buildTimelineWav(items: TimelineItem[]): {
+  buffer: Buffer
+  durationMs: number
+  placedMs: number[]
+} {
+  if (!items.length) throw new Error('时间轴为空')
+
+  const durations: number[] = []
+  const pcm: Buffer[] = []
+  for (const it of items) {
+    const info = parseWav(it.audio)
+    pcm.push(it.audio.subarray(info.dataOffset, info.dataOffset + info.dataLength))
+    const ms = (info.dataLength / (SAMPLE_RATE * CHANNELS * BYTES_PER_SAMPLE)) * 1000
+    durations.push(ms)
+  }
+
+  // 顺序排放，重叠保护
+  const placedMs: number[] = []
+  let cursorMs = 0
+  for (let i = 0; i < items.length; i++) {
+    const want = Math.max(items[i].offsetMs, cursorMs)
+    placedMs.push(want)
+    cursorMs = want + durations[i]
+  }
+  const totalMs = cursorMs
+
+  const totalSamples = Math.ceil((totalMs / 1000) * SAMPLE_RATE)
+  const totalBytes = totalSamples * CHANNELS * BYTES_PER_SAMPLE
+  const track = Buffer.alloc(totalBytes)
+
+  items.forEach((it, i) => {
+    const startByte = Math.round((placedMs[i] / 1000) * SAMPLE_RATE) * CHANNELS * BYTES_PER_SAMPLE
+    const safeLen = Math.min(pcm[i].length, track.length - startByte)
+    if (safeLen > 0) pcm[i].copy(track, startByte, 0, safeLen)
+  })
+
+  return { buffer: Buffer.concat([wavHeader(totalBytes), track]), durationMs: totalMs, placedMs }
+}

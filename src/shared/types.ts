@@ -160,6 +160,11 @@ export const IPC = {
   styleList: 'style:list',
   styleSave: 'style:save',
   styleRemove: 'style:remove',
+  synthTimeline: 'synth:timeline',
+  fileSaveRecorded: 'file:saveRecorded',
+  audioProcess: 'audio:process',
+  audioInfo: 'audio:info',
+  timelineProgress: 'synth:timelineProgress',
 } as const
 
 /** 主进程 → 渲染进程的流式进度事件 */
@@ -258,6 +263,43 @@ export interface AsrResponse {
   audioTokens?: number
   totalTokens?: number
   elapsedMs?: number
+  code?: string
+  message?: string
+}
+
+// ===== 时间戳配音 =====
+
+/** 一条带时间戳的台词 */
+export interface TimelineCue {
+  /** 时间点 mm:ss 或 mm:ss.ms */
+  time: string
+  text: string
+}
+
+/** 时间戳配音请求 */
+export interface TimelineRequest {
+  cues: TimelineCue[]
+  mode: 'preset'
+  voiceId?: string
+  instruction?: string
+}
+
+/** 时间轴进度事件 */
+export interface TimelineProgressEvent {
+  index: number
+  total: number
+  /** 该段合成后实际摆放的时间点（mm:ss） */
+  placedAt?: string
+  elapsedMs: number
+}
+
+export interface TimelineResponse {
+  ok: boolean
+  filePath?: string
+  /** LRC 字幕文件路径 */
+  lrcPath?: string
+  durationMs?: number
+  placedMs?: number[]
   code?: string
   message?: string
 }

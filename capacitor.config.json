@@ -1,0 +1,13 @@
+{
+  "appId": "com.voicecanvas.mobile",
+  "appName": "声绘",
+  "webDir": "dist-mobile",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0f1013"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

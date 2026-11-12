@@ -1,0 +1,141 @@
+/* ============================================================
+   移动端样式：在桌面主题基础上做触屏适配
+   ============================================================ */
+
+:root {
+  /* 移动端字号略大，保证可读性 */
+  --vc-m-font: 15px;
+  --vc-safe-top: env(safe-area-inset-top, 0px);
+  --vc-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,
+body {
+  height: 100%;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-size: var(--vc-m-font);
+  overflow: hidden;
+}
+
+/* 移动端页面容器：底部留出 tabbar 高度 */
+.m-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(56px + var(--vc-safe-bottom));
+}
+
+.m-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px 24px;
+}
+
+/* 触屏下按钮加大点按区 */
+.el-button {
+  min-height: 40px;
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  font-size: 16px !important; /* 防 iOS 聚焦缩放 */
+}
+
+/* 输入框内文字 16px 才不会触发缩放，但视觉上想小一点就用缩放补偿 */
+.el-textarea__inner {
+  line-height: 1.7 !important;
+}
+
+/* 移动端卡片：更紧凑 */
+.m-card {
+  background: var(--vc-bg-panel);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius-md);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.m-card-title {
+  font-size: 14px;
+  font-weight: 620;
+  color: var(--vc-text-primary);
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.m-card-title::before {
+  content: '';
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--vc-accent);
+  opacity: 0.6;
+}
+
+/* 底部 tabbar */
+.m-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(56px + var(--vc-safe-bottom));
+  padding-bottom: var(--vc-safe-bottom);
+  display: flex;
+  background: rgba(18, 20, 25, 0.92);
+  backdrop-filter: blur(18px);
+  border-top: 1px solid var(--vc-border);
+  z-index: 100;
+}
+
+.m-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: transparent;
+  color: var(--vc-text-muted);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color var(--vc-dur-fast) var(--vc-ease);
+}
+
+.m-tab.active {
+  color: var(--vc-accent);
+}
+
+.m-tab svg {
+  width: 21px;
+  height: 21px;
+}
+
+/* 移动端顶栏 */
+.m-header {
+  padding: calc(14px + var(--vc-safe-top)) 16px 12px;
+  border-bottom: 1px solid var(--vc-border);
+  flex-shrink: 0;
+}
+
+.m-header-title {
+  font-size: 19px;
+  font-weight: 650;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.m-header-desc {
+  font-size: 12.5px;
+  color: var(--vc-text-muted);
+  margin: 3px 0 0;
+}
