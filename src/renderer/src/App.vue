@@ -9,6 +9,7 @@ import TranscriptView from './views/TranscriptView.vue'
 import VoiceLibraryView from './views/VoiceLibraryView.vue'
 import HistoryView from './views/HistoryView.vue'
 import SettingsView from './views/SettingsView.vue'
+import { useShortcuts } from './composables/useShortcuts'
 
 type TabKey =
   | 'synth'
@@ -60,6 +61,27 @@ onMounted(async () => {
 function go(key: TabKey) {
   active.value = key
 }
+
+// 全局快捷键：Ctrl+1~9 切页，Ctrl+, 设置
+const tabOrder: TabKey[] = [
+  'synth',
+  'design',
+  'clone',
+  'batch',
+  'timeline',
+  'transcript',
+  'voices',
+  'history',
+]
+
+useShortcuts([
+  ...tabOrder.map((k, i) => ({
+    keys: `ctrl+${i + 1}`,
+    label: `切到${navItems.find((n) => n.key === k)?.label}`,
+    handler: () => go(k),
+  })),
+  { keys: 'ctrl+,', label: '打开设置', handler: () => go('settings') },
+])
 
 async function onKeySaved() {
   const s = await window.vc.settings.get()
@@ -133,9 +155,13 @@ async function onKeySaved() {
 
     <main class="content">
       <header class="topbar">
-        <div>
+        <div class="topbar-main">
           <h1 class="topbar-title">{{ current.label }}</h1>
           <p class="topbar-desc">{{ current.desc }}</p>
+        </div>
+        <div class="topbar-right">
+          <span class="status-dot" :class="{ ok: hasApiKey }" :title="hasApiKey ? 'API 已配置' : 'API 未配置'" />
+          <span class="status-text">{{ hasApiKey ? '就绪' : '未配置' }}</span>
         </div>
       </header>
 
@@ -359,21 +385,55 @@ async function onKeySaved() {
 }
 
 .topbar {
-  padding: 16px 24px 12px;
-  border-bottom: 1px solid var(--vc-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 32px 14px;
+  border-bottom: 1px solid var(--vc-hairline);
   flex-shrink: 0;
+  /* 顶栏比内容区略亮一点，形成"光源在上"的层次 */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent);
 }
 
 .topbar-title {
-  font-size: 17px;
-  font-weight: 650;
+  font-size: 18px;
+  font-weight: 640;
   margin: 0;
+  letter-spacing: -0.012em;
+  color: var(--vc-text-primary);
 }
 
 .topbar-desc {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--vc-text-muted);
-  margin: 2px 0 0;
+  margin: 3px 0 0;
+  letter-spacing: 0.005em;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* 状态指示：颜色 + 文字双通道，不靠颜色单独承载语义 */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vc-text-faint);
+  flex-shrink: 0;
+}
+
+.status-dot.ok {
+  background: var(--vc-scope);
+  box-shadow: 0 0 8px rgba(111, 211, 199, 0.5);
+}
+
+.status-text {
+  font-size: 11.5px;
+  color: var(--vc-text-muted);
+  letter-spacing: 0.03em;
 }
 
 .view-host {

@@ -133,6 +133,10 @@ button {
   padding: var(--vc-gap-lg) var(--vc-gap-xl);
   height: 100%;
   overflow-y: auto;
+  /* 超宽屏下限制版心，避免内容被拉成一条长带 */
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* 卡片：用极轻的顶部高光模拟"被灯照到"的物理感，
@@ -311,13 +315,33 @@ button {
   --el-button-border-color: var(--vc-accent);
   --el-button-hover-bg-color: var(--vc-accent-bright);
   --el-button-hover-border-color: var(--vc-accent-bright);
+  --el-button-active-bg-color: var(--vc-accent-dim);
+  --el-button-active-border-color: var(--vc-accent-dim);
   --el-button-text-color: #1a1408;
   font-weight: 620;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
+.el-button--primary.is-disabled,
+.el-button--primary.is-disabled:hover {
+  --el-button-bg-color: #4a4030;
+  --el-button-border-color: #4a4030;
+  --el-button-text-color: #8a7c63;
+  box-shadow: none;
+}
+
 .el-button--primary:not(.is-disabled):active {
   transform: scale(0.96);
+}
+
+/* 默认按钮：深色描边，悬停时边框微亮，不抢主按钮的视觉 */
+.el-button--default:not(.is-link):not(.is-text) {
+  --el-button-bg-color: var(--vc-bg-elevated);
+  --el-button-border-color: var(--vc-border);
+  --el-button-text-color: var(--vc-text-primary);
+  --el-button-hover-bg-color: var(--vc-bg-hover);
+  --el-button-hover-border-color: var(--vc-border-strong);
+  --el-button-hover-text-color: #fff;
 }
 
 .el-button {
@@ -425,4 +449,38 @@ button {
   outline: 2px solid var(--vc-accent);
   outline-offset: 2px;
   border-radius: var(--vc-radius-xs);
+}
+/* ---------- Element Plus 主色变量链全覆盖 ----------
+   Element 用它自己的 --el-color-primary 派生各种 light-dark 变体，
+   只改 --el-button-* 不够，必须从主色源头覆盖。 */
+:root {
+  --el-color-primary: #e6a94f;
+  --el-color-primary-light-3: #d9a04a;
+  --el-color-primary-light-5: #c08a3e;
+  --el-color-primary-light-7: #7a5c2a;
+  --el-color-primary-light-8: #4d3d20;
+  --el-color-primary-light-9: #2e2618;
+  --el-color-primary-dark-2: #f2bd6d;
+
+  --el-bg-color: #16181c;
+  --el-bg-color-overlay: #1d2026;
+  --el-bg-color-page: #0f1013;
+  --el-fill-color-blank: #121419;
+  --el-fill-color-light: #24282f;
+  --el-fill-color: #1d2026;
+
+  --el-text-color-primary: #e9e7e2;
+  --el-text-color-regular: #c9c6c0;
+  --el-text-color-secondary: #9b9890;
+  --el-text-color-placeholder: #6a6862;
+  --el-text-color-disabled: #4a4844;
+
+  --el-border-color: #262a31;
+  --el-border-color-light: #2e323a;
+  --el-border-color-lighter: #262a31;
+  --el-border-color-extra-light: #1e2128;
+  --el-border-color-dark: #363b45;
+
+  --el-mask-color: rgba(0, 0, 0, 0.7);
+  --el-box-shadow-light: 0 3px 10px rgba(0, 0, 0, 0.4);
 }

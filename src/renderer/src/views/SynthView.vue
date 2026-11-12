@@ -17,6 +17,7 @@ import { useSynth, FORMAT_OPTIONS, MODE_META } from '../composables/useSynth'
 import { formatBytes } from '../composables/usePlayer'
 import AudioPlayer from '../components/AudioPlayer.vue'
 import AudioTagPanel from '../components/AudioTagPanel.vue'
+import { useShortcuts } from '../composables/useShortcuts'
 
 const emit = defineEmits<{ (e: 'need-key'): void }>()
 
@@ -416,6 +417,18 @@ onMounted(async () => {
   applyPendingVoice()
 })
 
+// Ctrl+Enter 生成，Ctrl+Shift+R 重新生成
+useShortcuts([
+  { keys: 'ctrl+enter', label: '开始生成', handler: () => void generate() },
+  {
+    keys: 'ctrl+shift+r',
+    label: '重新生成',
+    handler: () => {
+      if (lastRunAt.value) void generate()
+    },
+  },
+])
+
 async function loadAssets(): Promise<void> {
   try {
     assets.value = await window.vc.voices.list()
@@ -572,6 +585,9 @@ function applyPendingVoice(): void {
           >
             {{ loading ? '生成中…' : '开始生成' }}
           </el-button>
+          <p class="vc-hint kbd-hint">
+            快捷键 <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
+          </p>
 
           <p v-if="showSlowHint" class="vc-hint">
             流式下服务端首字节通常在 1 秒内返回，整段仍要等合成结束。
@@ -892,4 +908,19 @@ function applyPendingVoice(): void {
   border-color: var(--vc-accent);
   color: var(--vc-accent);
   background: var(--vc-accent-soft);
+}
+.kbd-hint {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.kbd-hint kbd {
+  font-family: var(--vc-font-mono);
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--vc-bg-elevated);
+  border: 1px solid var(--vc-border);
+  border-bottom-width: 2px;
+  color: var(--vc-text-secondary);
 }</style>

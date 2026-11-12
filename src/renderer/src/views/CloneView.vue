@@ -258,14 +258,11 @@ async function confirmSave() {
 
 <template>
   <div class="vc-page clone-page">
-    <!-- 顶部说明条 -->
+    <!-- 顶部说明条：一句话讲清楚 -->
     <div class="notice-bar">
-      <div class="notice-mark">🧬</div>
-      <div class="notice-body">
-        <div class="notice-title">用一段录音，复刻一个人的音色</div>
-        <p class="notice-text">上传 5～30 秒<b>干净的人声</b>作为样本，模型抽取音色特征后朗读你的文本。样本以 <code>data:audio/*;base64</code> 形式随请求发送，服务端上限 10MB（编码后），所以原文件不能超过 <b>{{ MAX_LABEL }}</b>。</p>
-        <p class="notice-text">该模式<b>不支持 (唱歌)</b>；<b>没有真流式</b>——流式参数会被忽略，服务端跑完一次性返回，通常需要十几秒。</p>
-      </div>
+      <p class="notice-line">
+        录一段 5～30 秒的干净人声（或拖入 wav/mp3），模型学它的音色来念你的稿子。上限 {{ MAX_LABEL }}。
+      </p>
     </div>
 
     <div v-if="!hasKey" class="key-warn">
@@ -537,54 +534,9 @@ async function confirmSave() {
   gap: 16px;
 }
 
-/* ---------- 顶部说明 ---------- */
-.notice-bar {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  background: var(--vc-bg-panel);
-  border: 1px solid var(--vc-border);
-  border-left: 3px solid var(--vc-warning);
-  border-radius: var(--vc-radius-md);
-  padding: 14px 16px;
-}
-
-.notice-mark {
-  font-size: 20px;
-  line-height: 1.2;
-}
-
-.notice-body {
-  min-width: 0;
-}
-
-.notice-title {
-  font-size: 13.5px;
-  font-weight: 650;
-}
-
-.notice-text {
-  font-size: 12.5px;
-  color: var(--vc-text-secondary);
-  line-height: 1.75;
-  margin: 6px 0 0;
-}
-
-.notice-text b {
-  color: var(--vc-text-primary);
-  font-weight: 600;
-}
-
-.notice-text code,
-.cap-table code {
-  font-family: var(--vc-font-mono);
-  font-size: 12px;
-  background: var(--vc-bg-input);
-  border: 1px solid var(--vc-border);
-  padding: 0 4px;
-  border-radius: 3px;
-  color: var(--vc-accent);
-}
+/* 顶部说明（精简版） */
+.notice-bar { background: transparent; border: none; border-left: 3px solid var(--vc-info); padding: 4px 0 4px 14px; }
+.notice-line { font-size: 13px; color: var(--vc-text-secondary); line-height: 1.7; margin: 0; }
 
 .key-warn {
   display: flex;

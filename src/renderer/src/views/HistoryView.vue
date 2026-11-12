@@ -129,6 +129,44 @@ async function reveal(r: GenerationRecord): Promise<void> {
   }
 }
 
+// ---------- 音频后期处理（去静音 / 响度归一 / 静音上限）----------
+const fxTrim = ref(true)
+const fxNormalize = ref(false)
+const fxCapMs = ref(0)
+const fxRunning = ref(false)
+const fxResult = ref('')
+
+async function applyFx(): Promise<void> {
+  const rec = playingRecord.value
+  if (!rec) return
+  fxRunning.value = true
+  fxResult.value = ''
+  try {
+    const res = await window.vc.file.processAudio({
+      filePath: rec.filePath,
+      trimEdges: fxTrim.value,
+      normalize: fxNormalize.value,
+      capSilenceMs: fxCapMs.value || undefined,
+    })
+    if (res.ok && res.filePath) {
+      if (res.changed) {
+        const before = res.before ? (res.before.durationMs / 1000).toFixed(1) : '?'
+        const after = res.after ? (res.after.durationMs / 1000).toFixed(1) : '?'
+        fxResult.value = `${before}s → ${after}s（${(res.applied || []).join('、')}）`
+        ElMessage.success('处理完成，已另存为新文件')
+      } else {
+        fxResult.value = '没有检测到需要处理的内容'
+      }
+    } else {
+      ElMessage.error(res.message || '处理失败')
+    }
+  } catch (e) {
+    ElMessage.error(errText(e))
+  } finally {
+    fxRunning.value = false
+  }
+}
+
 async function removeOne(r: GenerationRecord): Promise<void> {
   try {
     await ElMessageBox.confirm(
@@ -269,6 +307,31 @@ onMounted(load)
         :title="`${modeLabel(playingRecord.mode)} · ${voiceText(playingRecord)}`"
         :meta="`${formatDateTime(playingRecord.createdAt)} · ${summarize(playingRecord.text)}`"
       />
+
+      <!-- 后期处理：去静音 / 归一 / 静音上限 -->
+      <div class="fx-row">
+        <span class="fx-label">后期处理</span>
+        <el-checkbox v-model="fxTrim" size="small">去首尾静音</el-checkbox>
+        <el-checkbox v-model="fxNormalize" size="small">响度归一</el-checkbox>
+        <el-select v-model="fxCapMs" size="small" style="width: 132px">
+          <el-option :value="0" label="不压静音" />
+          <el-option :value="500" label="静音≤0.5s" />
+          <el-option :value="800" label="静音≤0.8s" />
+          <el-option :value="1200" label="静音≤1.2s" />
+        </el-select>
+        <el-button
+          size="small"
+          type="primary"
+          plain
+          :loading="fxRunning"
+          :disabled="!fxTrim && !fxNormalize && !fxCapMs"
+          @click="applyFx"
+        >
+          处理并另存
+        </el-button>
+        <span v-if="fxResult" class="fx-result">{{ fxResult }}</span>
+      </div>
+
       <div class="player-close">
         <el-button size="small" link @click="playingRecord = null">收起播放器</el-button>
       </div>
@@ -439,4 +502,25 @@ onMounted(load)
 :deep(.row-playing) > td {
   background: var(--vc-accent-soft) !important;
 }
-</style>
+
+/* ---------- 后期处理行 ---------- */
+.fx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--vc-hairline);
+}
+
+.fx-label {
+  font-size: 12px;
+  color: var(--vc-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.fx-result {
+  font-size: 12px;
+  color: var(--vc-scope);
+}</style>
