@@ -25,15 +25,21 @@ app.whenReady().then(async () => {
   await win.loadFile(path.join(__dirname, '../out/renderer/index.html'))
   await new Promise((r) => setTimeout(r, 1500))
 
-  // 通过点击侧边栏切页（导航是纯 Vue 状态）
+  // 通过侧边栏项的文字匹配切页（比索引稳，加减页面不会错位）
   await win.webContents.executeJavaScript(`
     (async () => {
       const target = ${JSON.stringify(page)};
+      const map = {
+        synth: '语音合成', design: '音色设计', clone: '音色克隆', batch: '批量工作台',
+        timeline: '时间戳配音', compare: '音色对比', transcript: '听写转写',
+        voices: '我的音色', history: '生成历史', settings: '设置'
+      };
+      const label = map[target] || '语音合成';
       const btns = Array.from(document.querySelectorAll('.nav-item'));
-      const idx = ['synth','design','clone','batch','timeline','transcript','voices','history','settings'].indexOf(target);
-      if (idx >= 0 && btns[idx]) { btns[idx].click(); }
+      const btn = btns.find(b => (b.textContent || '').includes(label));
+      if (btn) btn.click();
       await new Promise(r => setTimeout(r, 700));
-      return document.title;
+      return document.title + ' | ' + label;
     })()
   `)
   await new Promise((r) => setTimeout(r, 900))
