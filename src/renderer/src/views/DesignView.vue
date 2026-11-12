@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 /**
  * 音色设计页（voicedesign 模式）
  *
@@ -31,6 +31,65 @@ const text = ref('')
 const optimize = ref(false)
 const format = ref<AudioFormat>('wav')
 const hasKey = ref(true)
+
+// ---------- AI 辅助（mimo-v2.6-flash 文本模型）----------
+const polishing = ref(false)
+const generatingText = ref(false)
+
+/** 把粗糙想法扩写成专业音色描述。为空时弹输入框收集想法 */
+async function aiPolishDescription() {
+  if (polishing.value) return
+  let idea = description.value.trim()
+  if (!idea) {
+    try {
+      const res = await ElMessageBox.prompt(
+        '用一句话说说你想要什么样的声音？（例如：一个温柔但有点疲惫的晚安电台女主播）',
+        'AI 帮你写音色描述',
+        {
+          confirmButtonText: '生成',
+          cancelButtonText: '取消',
+          inputPlaceholder: '描述你的声音想法…',
+        },
+      )
+      idea = (res.value || '').trim()
+    } catch {
+      return
+    }
+    if (!idea) {
+      ElMessage.warning('请先输入你的想法')
+      return
+    }
+  }
+  polishing.value = true
+  try {
+    const polished = await window.vc.llm.polishDescription(idea)
+    description.value = polished
+    ElMessage.success('音色描述已生成，可继续手动微调')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '生成失败')
+  } finally {
+    polishing.value = false
+  }
+}
+
+/** 根据当前描述生成适配的合成文本 */
+async function aiGenerateText() {
+  if (generatingText.value) return
+  const desc = description.value.trim()
+  if (!desc) {
+    ElMessage.warning('请先填写音色描述，AI 才能据此写出贴合的文本')
+    return
+  }
+  generatingText.value = true
+  try {
+    text.value = await window.vc.llm.generateSampleText(desc)
+    ElMessage.success('合成文本已生成')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '生成失败')
+  } finally {
+    generatingText.value = false
+  }
+}
 
 onMounted(async () => {
   try {
@@ -365,6 +424,15 @@ async function confirmSave() {
             placeholder="例：一位年近七旬的老先生，说带北方口音的普通话，语速缓慢而沉稳，嗓音略带沙哑和沧桑感。&#10;&#10;建议 1～4 句，写清「谁在说、声音什么样、此刻什么状态」。"
           />
           <div class="desc-actions">
+            <el-button
+              size="small"
+              type="primary"
+              plain
+              :loading="polishing"
+              @click="aiPolishDescription"
+            >
+              AI 帮写描述
+            </el-button>
             <el-button size="small" :disabled="!description" @click="clearDescription">
               清空
             </el-button>
@@ -481,6 +549,20 @@ async function confirmSave() {
                 : '要让它读出来的内容，例如：各位听众，晚上好。'
             "
           />
+
+          <div class="desc-actions" style="margin-top: 8px">
+            <el-button
+              size="small"
+              type="primary"
+              plain
+              :loading="generatingText"
+              :disabled="!description.trim()"
+              @click="aiGenerateText"
+            >
+              AI 生成适配文本
+            </el-button>
+            <span class="vc-hint inline">根据音色描述写一段最适合它念的稿子</span>
+          </div>
 
           <div v-if="optimize" class="hint-banner">
             已开启 <code>optimize_text_preview</code>：文本可以为空，返回后可在下方看到模型实际念的稿子。

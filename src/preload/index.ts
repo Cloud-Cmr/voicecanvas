@@ -34,6 +34,20 @@ const api = {
       ipcRenderer.invoke(IPC.synthRun, req),
     cancel: (requestId: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke(IPC.synthCancel, requestId),
+    /** 长文本：多段按序合成 + WAV 拼接（每段之间 300ms 静音） */
+    runLong: (
+      base: SynthRequest,
+      segments: string[],
+    ): Promise<SynthResponse & { segments?: number }> =>
+      ipcRenderer.invoke(IPC.synthRunLong, base, segments),
+    /** 长文本逐段进度 */
+    onLongProgress: (
+      cb: (e: { index: number; total: number; elapsedMs: number }) => void,
+    ) => {
+      const handler = (_e: unknown, payload: any) => cb(payload)
+      ipcRenderer.on('synth:longprogress', handler)
+      return () => ipcRenderer.removeListener('synth:longprogress', handler)
+    },
     onProgress: (
       cb: (e: { requestId: string; receivedBytes: number; elapsedMs: number }) => void,
     ) => {
@@ -90,6 +104,14 @@ const api = {
   probe: {
     models: (): Promise<{ ok: boolean; models?: string[]; message?: string }> =>
       ipcRenderer.invoke(IPC.probeModels),
+  },
+  llm: {
+    /** 把粗糙想法润色成专业音色描述 */
+    polishDescription: (idea: string): Promise<string> =>
+      ipcRenderer.invoke(IPC.llmPolish, idea),
+    /** 根据音色描述生成适配的合成文本 */
+    generateSampleText: (description: string): Promise<string> =>
+      ipcRenderer.invoke(IPC.llmSampleText, description),
   },
 }
 

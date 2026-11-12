@@ -138,6 +138,7 @@ export const IPC = {
   apiKeyTest: 'apikey:test',
   synthRun: 'synth:run',
   synthCancel: 'synth:cancel',
+  synthRunLong: 'synth:runLong',
   fileSave: 'file:save',
   fileOpenDialog: 'file:openDialog',
   fileReveal: 'file:reveal',
@@ -152,6 +153,9 @@ export const IPC = {
   batchRun: 'batch:run',
   batchCancel: 'batch:cancel',
   probeModels: 'probe:models',
+  llmPolish: 'llm:polishDescription',
+  llmSampleText: 'llm:generateSampleText',
+  llmSplitText: 'llm:splitLongText',
 } as const
 
 /** 主进程 → 渲染进程的流式进度事件 */

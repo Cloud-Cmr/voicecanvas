@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 /**
  * 语音合成页（左：正文 / 右：参数）。
  *
@@ -263,8 +263,81 @@ async function generate(): Promise<void> {
   const req = buildRequest()
   if (!req) return
   lastRunAt.value = Date.now()
+
+  // 长文本模式：按句切分逐段合成再拼接（仅 wav；mp3 拼接需 ffmpeg，暂不支持）
+  const body = text.value.trim()
+  if (longMode.value && body.length > 120) {
+    if (format.value !== 'wav') {
+      ElMessage.warning('长文拼接当前仅支持 WAV 输出，已临时切换')
+      format.value = 'wav'
+    }
+    if (req.mode === 'preset' && req.stream) req.stream = false
+    await runLong(req, body)
+    return
+  }
+
   await synth.run(req)
   if (result.value) ElMessage.success('合成完成')
+}
+
+/* ---------------- 长文本分段合成 ---------------- */
+
+const longMode = ref(false)
+const longIndex = ref(0)
+const longTotal = ref(0)
+let offLongProgress: (() => void) | null = null
+
+/** 按句子切分（。！？；…\n 收口），超长句再按逗号二切，单段目标 ≤ 200 字 */
+function splitSentences(body: string): string[] {
+  const raw = body
+    .replace(/\r\n/g, '\n')
+    .split(/(?<=[。！？；…\n])/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const out: string[] = []
+  for (const s of raw) {
+    if (s.length <= 200) {
+      out.push(s)
+      continue
+    }
+    // 超长句按逗号/顿号聚合到 ~200 字
+    let buf = ''
+    for (const piece of s.split(/(?<=[，,、])/)) {
+      if ((buf + piece).length > 200 && buf) {
+        out.push(buf.trim())
+        buf = piece
+      } else {
+        buf += piece
+      }
+    }
+    if (buf.trim()) out.push(buf.trim())
+  }
+  return out
+}
+
+async function runLong(req: SynthRequest, body: string): Promise<void> {
+  const segments = splitSentences(body)
+  longTotal.value = segments.length
+  longIndex.value = 0
+  loading.value = true
+  error.value = null
+  try {
+    const res = await window.vc.synth.runLong(req, segments)
+    if (res.ok) {
+      result.value = res
+      ElMessage.success(`长文合成完成，共 ${res.segments} 段已拼接`)
+    } else {
+      error.value = res.message
+      ElMessage.error(res.message)
+    }
+  } catch (e: any) {
+    error.value = e?.message || String(e)
+    ElMessage.error(error.value || '长文合成失败')
+  } finally {
+    loading.value = false
+    longTotal.value = 0
+    longIndex.value = 0
+  }
 }
 
 const resultMeta = computed(() => {
@@ -406,10 +479,20 @@ function applyPendingVoice(): void {
 
           <div class="stream-row">
             <div>
+              <div class="stream-title">长文模式</div>
+              <p class="vc-hint" style="margin: 0">
+                超过一屏的文章自动按句切段、逐段合成、无缝拼接成一个 WAV（段间 300ms 停顿），适合有声书、播客长稿。
+              </p>
+            </div>
+            <el-switch v-model="longMode" :disabled="loading" />
+          </div>
+
+          <div class="stream-row">
+            <div>
               <div class="stream-title">流式生成</div>
               <p class="vc-hint" style="margin: 0">{{ streamHint }}</p>
             </div>
-            <el-switch v-model="stream" :disabled="!canStream || loading" />
+            <el-switch v-model="stream" :disabled="!canStream || loading || longMode" />
           </div>
 
           <el-button

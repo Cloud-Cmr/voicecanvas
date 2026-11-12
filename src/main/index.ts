@@ -31,6 +31,8 @@ import {
   DEFAULT_BASE_URL,
 } from './providers/mimo'
 import { runBatch, cancelBatch, parseSrt, parseTxt } from './batch'
+import { polishVoiceDescription, generateSampleText, DEFAULT_LLM_MODEL } from './providers/llm'
+import { concatWavs } from './wav'
 import type { BatchRunRequest, ExportFormat } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
@@ -288,6 +290,103 @@ function registerIpc(): void {
 
   ipcMain.handle(IPC.batchCancel, (_e, jobId: string) => {
     return { ok: cancelBatch(jobId) }
+  })
+
+  // ===== 文本模型辅助（音色描述润色 / 采样文本生成）=====
+  ipcMain.handle(IPC.llmPolish, async (_e, idea: string) => {
+    const apiKey = await getApiKey()
+    if (!apiKey) throw new TtsError('E_NO_KEY', '尚未配置 API Key')
+    const settings = await getSettings()
+    return polishVoiceDescription(idea, {
+      apiKey,
+      baseUrl: settings.baseUrl ?? undefined,
+    })
+  })
+
+  ipcMain.handle(IPC.llmSampleText, async (_e, description: string) => {
+    const apiKey = await getApiKey()
+    if (!apiKey) throw new TtsError('E_NO_KEY', '尚未配置 API Key')
+    const settings = await getSettings()
+    return generateSampleText(description, {
+      apiKey,
+      baseUrl: settings.baseUrl ?? undefined,
+    })
+  })
+
+  // ===== 长文本分段合成：多段按序合成 + WAV 拼接 =====
+  ipcMain.handle(IPC.synthRunLong, async (event, base: SynthRequest, segments: string[]) => {
+    const apiKey = await getApiKey()
+    if (!apiKey) return { ok: false, code: 'E_NO_KEY', message: '尚未配置 API Key' }
+    const settings = await getSettings()
+    const started = Date.now()
+    const audioParts: Buffer[] = []
+    const usage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+
+    try {
+      for (let i = 0; i < segments.length; i++) {
+        if (event.sender.isDestroyed()) break
+        const seg = segments[i]
+        const segReq: SynthRequest = { ...base, text: seg, stream: false }
+        let cloneSample: { buffer: Buffer; path: string } | undefined
+        if (segReq.mode === 'clone' && segReq.samplePath) {
+          cloneSample = { buffer: await fs.readFile(segReq.samplePath), path: segReq.samplePath }
+        }
+        const raw = await synthesize(
+          segReq,
+          {
+            apiKey,
+            baseUrl: settings.baseUrl ?? undefined,
+            models: settings.models,
+          },
+          cloneSample,
+        )
+        audioParts.push(raw.audio)
+        if (raw.usage) {
+          usage.promptTokens += raw.usage.promptTokens
+          usage.completionTokens += raw.usage.completionTokens
+          usage.totalTokens += raw.usage.totalTokens
+        }
+        event.sender.send('synth:longprogress', {
+          index: i,
+          total: segments.length,
+          elapsedMs: Date.now() - started,
+        })
+      }
+
+      const merged = concatWavs(audioParts)
+      const dir = await ensureOutputDir()
+      const stamp = new Date().toISOString().replace(/[:T]/g, '-').replace(/\..+$/, '')
+      const ext = merged ? 'wav' : 'wav'
+      const filePath = path.join(dir, `long-${stamp}.${ext}`)
+      await fs.writeFile(filePath, merged)
+
+      await addHistory({
+        id: randomUUID(),
+        mode: base.mode,
+        text: `${base.text.slice(0, 80)}${base.text.length > 80 ? '…' : ''}（长文 ${segments.length} 段）`,
+        instruction: base.instruction,
+        voiceName: base.voiceId || '长文合成',
+        filePath,
+        bytes: merged.length,
+        format: 'wav',
+        usage,
+        createdAt: Date.now(),
+      })
+
+      return {
+        ok: true,
+        filePath,
+        bytes: merged.length,
+        usage,
+        elapsedMs: Date.now() - started,
+        segments: segments.length,
+      }
+    } catch (err: any) {
+      if (err instanceof TtsError) {
+        return { ok: false, code: err.code, message: err.message, detail: err.detail }
+      }
+      return { ok: false, code: 'E_UNKNOWN', message: err?.message || String(err) }
+    }
   })
 
   ipcMain.handle(IPC.historyExport, async (_e, format: ExportFormat) => {
