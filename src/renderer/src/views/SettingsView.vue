@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 /**
  * 设置页：API Key、Base URL、模型 ID、输出选项。
  *
@@ -8,7 +8,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { AppSettings, AudioFormat } from '../../../shared/types'
-import { DEFAULT_MODELS } from '../../../shared/constants'
+import { DEFAULT_MODELS, DEFAULT_BASE_URL } from '../../../shared/constants'
 
 const emit = defineEmits<{ (e: 'saved'): void }>()
 
@@ -23,9 +23,21 @@ const serverModels = ref<string[]>([])
 onMounted(async () => {
   try {
     settings.value = await window.vc.settings.get()
+  } catch (e) {
+    // IPC 不可用时给一份可用默认值，避免整页白屏
+    settings.value = {
+      providerId: 'mimo',
+      baseUrl: DEFAULT_BASE_URL,
+      models: { ...DEFAULT_MODELS },
+      defaultFormat: 'wav',
+      outputDir: '',
+      hasApiKey: false,
+    }
+    ElMessage.warning('读取设置失败，已使用默认值')
   } finally {
     loading.value = false
   }
+  void loadUsage()
 })
 
 async function saveKey() {
@@ -114,6 +126,52 @@ const formatOptions: Array<{ value: AudioFormat; label: string }> = [
   { value: 'wav', label: 'WAV（无损，体积大）' },
   { value: 'mp3', label: 'MP3（压缩，体积小）' },
 ]
+
+// ---------- 用量统计 ----------
+const usage = ref<{
+  total: number
+  tokens: number
+  bytes: number
+  byMode: Array<{ mode: string; label: string; count: number }>
+} | null>(null)
+
+const MODE_LABEL: Record<string, string> = {
+  preset: '预置音色',
+  design: '音色设计',
+  clone: '音色克隆',
+}
+
+async function loadUsage() {
+  try {
+    const records = await window.vc.history.list()
+    if (!records.length) {
+      usage.value = null
+      return
+    }
+    const byModeMap = new Map<string, number>()
+    let tokens = 0
+    let bytes = 0
+    for (const r of records) {
+      bytes += r.bytes || 0
+      tokens += r.usage?.totalTokens || 0
+      byModeMap.set(r.mode, (byModeMap.get(r.mode) || 0) + 1)
+    }
+    usage.value = {
+      total: records.length,
+      tokens,
+      bytes,
+      byMode: Array.from(byModeMap.entries()).map(([mode, count]) => ({
+        mode,
+        label: MODE_LABEL[mode] || mode,
+        count,
+      })),
+    }
+  } catch {
+    usage.value = null
+  }
+}
+
+
 </script>
 
 <template>
@@ -231,10 +289,39 @@ const formatOptions: Array<{ value: AudioFormat; label: string }> = [
         </el-button>
       </section>
 
+      <!-- 用量统计 -->
+      <section class="vc-card">
+        <h3 class="vc-card-title">
+          用量统计
+          <span class="vc-spacer" />
+          <el-button size="small" link @click="loadUsage">刷新</el-button>
+        </h3>
+        <div v-if="usage" class="usage-grid">
+          <div class="usage-item">
+            <span class="usage-num vc-num">{{ usage.total }}</span>
+            <span class="usage-label">生成次数</span>
+          </div>
+          <div class="usage-item">
+            <span class="usage-num vc-num">{{ usage.tokens.toLocaleString() }}</span>
+            <span class="usage-label">累计 Token</span>
+          </div>
+          <div class="usage-item">
+            <span class="usage-num vc-num">{{ (usage.bytes / 1024 / 1024).toFixed(1) }}</span>
+            <span class="usage-label">音频总量 (MB)</span>
+          </div>
+        </div>
+        <div v-if="usage" class="usage-modes">
+          <span v-for="m in usage.byMode" :key="m.mode" class="usage-mode">
+            {{ m.label }} <b class="vc-num">{{ m.count }}</b>
+          </span>
+        </div>
+        <p v-else class="vc-hint">还没有生成记录。</p>
+      </section>
+
       <!-- 关于 -->
       <section class="vc-card about">
         <h3 class="vc-card-title">关于</h3>
-        <p class="about-line"><strong>声绘 VoiceCanvas</strong> v0.1.0</p>
+        <p class="about-line"><strong>声绘 VoiceCanvas</strong> v0.5.0</p>
         <p class="about-line vc-muted">
           第三方非官方客户端，与小米公司无隶属关系。MiMo 语音合成服务由小米 MiMo 开放平台提供，
           使用前请遵守其服务条款。
@@ -320,4 +407,43 @@ const formatOptions: Array<{ value: AudioFormat; label: string }> = [
   margin: 0 0 6px;
   line-height: 1.7;
 }
-</style>
+
+/* ---------- 用量统计 ---------- */
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.usage-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.usage-num {
+  font-size: 24px;
+  font-weight: 640;
+  color: var(--vc-accent);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.usage-label {
+  font-size: 11.5px;
+  color: var(--vc-text-muted);
+}
+
+.usage-modes {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--vc-text-secondary);
+}
+
+.usage-mode b {
+  color: var(--vc-text-primary);
+  font-weight: 600;
+}</style>
