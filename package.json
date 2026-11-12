@@ -1,7 +1,7 @@
 {
   "name": "voicecanvas",
-  "version": "0.2.0",
-  "description": "澹扮粯 VoiceCanvas 鈥?妗岄潰绔?AI 璇煶宸ヤ綔鍙帮紝棣栧彂閫傞厤灏忕背 MiMo TTS",
+  "version": "0.3.0",
+  "description": "??? VoiceCanvas ???????AI ?????????????????? MiMo TTS",
   "private": true,
   "main": "./out/main/index.js",
   "author": "VoiceCanvas contributors",
@@ -33,7 +33,7 @@
   "build": {
     "appId": "com.voicecanvas.app",
     "productName": "VoiceCanvas",
-    "copyright": "Copyright 漏 2026 VoiceCanvas contributors",
+    "copyright": "Copyright ? 2026 VoiceCanvas contributors",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -61,7 +61,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "澹扮粯 VoiceCanvas",
+      "shortcutName": "??? VoiceCanvas",
       "artifactName": "VoiceCanvas-${version}-Setup.${ext}"
     },
     "portable": {
