@@ -72,6 +72,9 @@ const api = {
     /** 打开文本文件选择框（SRT/TXT 台词导入用），返回 {path,name} 或 null */
     openTextDialog: (): Promise<{ path: string; name: string } | null> =>
       ipcRenderer.invoke('file:openTextDialog'),
+    /** 按扩展名解析台词文件（srt/lrc/txt），返回台词数组 */
+    parseDialogue: (filePath: string): Promise<string[]> =>
+      ipcRenderer.invoke('file:parseDialogue', filePath),
     /** 把本地绝对路径转成可播放的 vcmedia:// URL，不走 file:// 权限 */
     toMediaUrl: (filePath: string): string =>
       `vcmedia://local/${encodeURIComponent(filePath)}`,

@@ -275,6 +275,22 @@ function registerIpc(): void {
     return { path: p, name: path.basename(p) }
   })
 
+  /** 解析台词文件：按扩展名选规则，返回台词数组（渲染端不再各自实现） */
+  ipcMain.handle('file:parseDialogue', async (_e, filePath: string) => {
+    const content = await fs.readFile(filePath, 'utf8')
+    const ext = path.extname(filePath).toLowerCase()
+    let lines: string[]
+    if (ext === '.srt') lines = parseSrt(content)
+    else if (ext === '.lrc') {
+      lines = content
+        .replace(/\r\n/g, '\n')
+        .split('\n')
+        .map((l) => l.replace(/^\[[^\]]*\]\s*/, '').trim())
+        .filter(Boolean)
+    } else lines = parseTxt(content)
+    return lines
+  })
+
   ipcMain.handle(IPC.fileWriteText, async (_e, filePath: string, content: string) => {
     await fs.writeFile(filePath, content, 'utf8')
     return { ok: true }

@@ -74,14 +74,8 @@ async function importDialogue() {
   try {
     const picked = await window.vc.file.openTextDialog()
     if (!picked) return
-    const content = await window.vc.file.readText(picked.path)
-    const ext = picked.path.toLowerCase().split('.').pop()
-    const parsed =
-      ext === 'srt'
-        ? parseSrtLocal(content)
-        : ext === 'lrc'
-          ? parseLrcLocal(content)
-          : parseTxtLocal(content)
+    // 解析规则在主进程统一实现（srt/lrc/txt），渲染端不再各写一份
+    const parsed = await window.vc.file.parseDialogue(picked.path)
     if (!parsed.length) {
       ElMessage.warning('文件里没有解析到可用的台词')
       return
@@ -93,33 +87,6 @@ async function importDialogue() {
   } finally {
     importing.value = false
   }
-}
-
-/** 本地解析（与主进程 parseSrt 同规则的渲染端副本，仅用于预览计数） */
-function parseSrtLocal(content: string): string[] {
-  return content
-    .replace(/\r\n/g, '\n')
-    .split(/\n{2,}/)
-    .map((b) =>
-      b
-        .split('\n')
-        .filter((l) => !/^\d+$/.test(l.trim()) && !l.includes('-->'))
-        .join(' ')
-        .replace(/<[^>]+>/g, '')
-        .trim(),
-    )
-    .filter(Boolean)
-}
-
-function parseLrcLocal(content: string): string[] {
-  return content
-    .split('\n')
-    .map((l) => l.replace(/^\[[^\]]*\]\s*/, '').trim())
-    .filter(Boolean)
-}
-
-function parseTxtLocal(content: string): string[] {
-  return content.split('\n').map((l) => l.trim()).filter(Boolean)
 }
 
 const totalChars = computed(() => lines.value.reduce((n, l) => n + l.length, 0))
