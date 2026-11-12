@@ -33,6 +33,8 @@ import { runBatch, cancelBatch, parseSrt, parseTxt } from './batch'
 import { polishVoiceDescription, generateSampleText, DEFAULT_LLM_MODEL } from './providers/llm'
 import { concatWavs, buildTimelineWav, type TimelineItem } from './wav'
 import { trimEdges, normalizePeak, capSilence, applyGain, getWavInfo } from './audiofx'
+import { fadeInOut, changeSpeed } from './audiofx2'
+import { exportBatch } from './exporter'
 import { transcribe } from './providers/asr'
 import { listStyles, saveStyle, removeStyle } from './styles'
 import type {
@@ -355,6 +357,8 @@ function registerIpc(): void {
         normalize?: boolean
         capSilenceMs?: number
         gainDb?: number
+        fadeMs?: number
+        speed?: number
       },
     ) => {
       try {
@@ -371,6 +375,10 @@ function registerIpc(): void {
           out = capSilence(out, payload.capSilenceMs)
           applied.push(`静音上限 ${payload.capSilenceMs}ms`)
         }
+        if (payload.speed && payload.speed !== 1) {
+          out = changeSpeed(out, payload.speed)
+          applied.push(`变速 ${payload.speed}x`)
+        }
         if (payload.gainDb) {
           out = applyGain(out, payload.gainDb)
           applied.push(`增益 ${payload.gainDb > 0 ? '+' : ''}${payload.gainDb}dB`)
@@ -378,6 +386,11 @@ function registerIpc(): void {
         if (payload.normalize) {
           out = normalizePeak(out, -1)
           applied.push('峰值归一 -1dB')
+        }
+        // 淡入淡出放最后，避免归一化后爆音
+        if (payload.fadeMs && payload.fadeMs > 0) {
+          out = fadeInOut(out, payload.fadeMs)
+          applied.push(`淡入淡出 ${payload.fadeMs}ms`)
         }
 
         if (out === raw) {
@@ -409,6 +422,26 @@ function registerIpc(): void {
     try {
       const buf = await fs.readFile(filePath)
       return { ok: true, ...getWavInfo(buf) }
+    } catch (e: any) {
+      return { ok: false, message: e?.message || String(e) }
+    }
+  })
+
+  /** 批量导出音频包：选目录 → 复制音频 + 写元数据 txt + 生成索引清单 */
+  ipcMain.handle(IPC.exportAudioPack, async (_e, ids: string[]) => {
+    try {
+      const all = await listHistory()
+      const picked = ids.length ? all.filter((r) => ids.includes(r.id)) : all
+      if (!picked.length) return { ok: false, message: '没有可导出的记录' }
+
+      const res = await dialog.showOpenDialog({
+        title: '选择导出目录',
+        properties: ['openDirectory', 'createDirectory'],
+      })
+      if (res.canceled || !res.filePaths[0]) return { ok: false, canceled: true }
+
+      const out = await exportBatch(picked, res.filePaths[0])
+      return { ok: true, ...out }
     } catch (e: any) {
       return { ok: false, message: e?.message || String(e) }
     }

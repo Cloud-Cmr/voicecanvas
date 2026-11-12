@@ -164,6 +164,7 @@ export const IPC = {
   fileSaveRecorded: 'file:saveRecorded',
   audioProcess: 'audio:process',
   audioInfo: 'audio:info',
+  exportAudioPack: 'export:audioPack',
   timelineProgress: 'synth:timelineProgress',
 } as const
 

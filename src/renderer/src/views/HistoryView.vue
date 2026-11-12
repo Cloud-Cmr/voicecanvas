@@ -132,6 +132,7 @@ async function reveal(r: GenerationRecord): Promise<void> {
 // ---------- 音频后期处理（去静音 / 响度归一 / 静音上限）----------
 const fxTrim = ref(true)
 const fxNormalize = ref(false)
+const fxFade = ref(false)
 const fxCapMs = ref(0)
 const fxRunning = ref(false)
 const fxResult = ref('')
@@ -147,6 +148,7 @@ async function applyFx(): Promise<void> {
       trimEdges: fxTrim.value,
       normalize: fxNormalize.value,
       capSilenceMs: fxCapMs.value || undefined,
+      fadeMs: fxFade.value ? 30 : undefined,
     })
     if (res.ok && res.filePath) {
       if (res.changed) {
@@ -249,6 +251,34 @@ async function exportHistory(format: 'csv' | 'json') {
   }
 }
 
+// ---------- 导出音频包（带元数据与清单）----------
+const selectedRows = ref<GenerationRecord[]>([])
+const packing = ref(false)
+
+function onSelectionChange(rows: GenerationRecord[]) {
+  selectedRows.value = rows
+}
+
+async function exportPack() {
+  packing.value = true
+  try {
+    const ids = selectedRows.value.length ? selectedRows.value.map((r) => r.id) : []
+    const res = await window.vc.file.exportAudioPack(ids)
+    if (res.ok) {
+      ElMessage.success(
+        `已导出 ${res.copied} 个音频（含说明文件和清单）${res.errors?.length ? `，${res.errors.length} 个失败` : ''}`,
+      )
+      if (res.index) await window.vc.file.reveal(res.index)
+    } else if (!res.canceled) {
+      ElMessage.error(res.message || '导出失败')
+    }
+  } catch (e) {
+    ElMessage.error(errText(e))
+  } finally {
+    packing.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -269,6 +299,16 @@ onMounted(load)
         clearable
       />
       <span class="vc-spacer" />
+      <el-button
+        size="small"
+        type="primary"
+        plain
+        :loading="packing"
+        :disabled="!records.length"
+        @click="exportPack"
+      >
+        {{ selectedRows.length ? `导出选中的 ${selectedRows.length} 个音频` : '导出全部音频' }}
+      </el-button>
       <el-dropdown @command="exportHistory">
         <el-button size="small" :disabled="!records.length">
           导出清单 <el-icon class="el-icon--right"><arrow-down /></el-icon>
@@ -313,6 +353,7 @@ onMounted(load)
         <span class="fx-label">后期处理</span>
         <el-checkbox v-model="fxTrim" size="small">去首尾静音</el-checkbox>
         <el-checkbox v-model="fxNormalize" size="small">响度归一</el-checkbox>
+        <el-checkbox v-model="fxFade" size="small">淡入淡出</el-checkbox>
         <el-select v-model="fxCapMs" size="small" style="width: 132px">
           <el-option :value="0" label="不压静音" />
           <el-option :value="500" label="静音≤0.5s" />
@@ -324,7 +365,7 @@ onMounted(load)
           type="primary"
           plain
           :loading="fxRunning"
-          :disabled="!fxTrim && !fxNormalize && !fxCapMs"
+          :disabled="!fxTrim && !fxNormalize && !fxFade && !fxCapMs"
           @click="applyFx"
         >
           处理并另存
@@ -359,7 +400,9 @@ onMounted(load)
       size="small"
       :row-class-name="rowClassName"
       empty-text="暂无数据"
+      @selection-change="onSelectionChange"
     >
+      <el-table-column type="selection" width="42" />
       <el-table-column label="时间" width="112">
         <template #default="{ row }">
           <span class="vc-mono time-cell">{{ formatDateTime(row.createdAt) }}</span>

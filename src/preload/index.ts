@@ -89,13 +89,15 @@ const api = {
       bytes: number[],
     ): Promise<{ ok: boolean; path?: string; bytes?: number; message?: string }> =>
       ipcRenderer.invoke(IPC.fileSaveRecorded, name, bytes),
-    /** 音频后期处理（去静音/归一/静音上限/增益），产出新文件 */
+    /** 音频后期处理（去静音/归一/静音上限/增益/淡入淡出/变速），产出新文件 */
     processAudio: (payload: {
       filePath: string
       trimEdges?: boolean
       normalize?: boolean
       capSilenceMs?: number
       gainDb?: number
+      fadeMs?: number
+      speed?: number
     }): Promise<{
       ok: boolean
       filePath?: string
@@ -115,6 +117,17 @@ const api = {
       peakDb?: number
       message?: string
     }> => ipcRenderer.invoke(IPC.audioInfo, filePath),
+    /** 批量导出音频包到指定目录（含元数据与清单） */
+    exportAudioPack: (
+      ids: string[],
+    ): Promise<{
+      ok: boolean
+      copied?: number
+      index?: string
+      errors?: string[]
+      canceled?: boolean
+      message?: string
+    }> => ipcRenderer.invoke(IPC.exportAudioPack, ids),
     /** 打开文本文件选择框（SRT/TXT 台词导入用），返回 {path,name} 或 null */
     openTextDialog: (): Promise<{ path: string; name: string } | null> =>
       ipcRenderer.invoke('file:openTextDialog'),
