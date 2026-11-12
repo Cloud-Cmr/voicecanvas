@@ -18,6 +18,7 @@ import { formatBytes } from '../composables/usePlayer'
 import AudioPlayer from '../components/AudioPlayer.vue'
 import AudioTagPanel from '../components/AudioTagPanel.vue'
 import { useShortcuts } from '../composables/useShortcuts'
+import { SCRIPT_TEMPLATES, groupScripts } from '../../../shared/scripts'
 
 const emit = defineEmits<{ (e: 'need-key'): void }>()
 
@@ -429,6 +430,20 @@ useShortcuts([
   },
 ])
 
+// ---------- 文案模板 ----------
+const scriptOpen = ref(false)
+const scriptGroups = groupScripts()
+const scriptScene = ref<string>(scriptGroups[0]?.scene ?? '广告')
+const scriptsOfScene = computed(
+  () => scriptGroups.find((g) => g.scene === scriptScene.value)?.items ?? [],
+)
+
+function applyScript(s: (typeof SCRIPT_TEMPLATES)[number]) {
+  text.value = s.text
+  scriptOpen.value = false
+  ElMessage.success(`已填入「${s.name}」，建议搭配：${s.voiceHint}`)
+}
+
 async function loadAssets(): Promise<void> {
   try {
     assets.value = await window.vc.voices.list()
@@ -480,6 +495,7 @@ function applyPendingVoice(): void {
             <template v-if="charCount > 0">· 约 {{ estSeconds }} 秒音频</template>
           </span>
           <span class="vc-spacer" />
+          <el-button size="small" @click="scriptOpen = true">文案模板</el-button>
           <el-button size="small" @click="pasteFromClipboard">粘贴</el-button>
           <el-button size="small" :disabled="!text" @click="clearText">清空</el-button>
         </div>
@@ -657,6 +673,40 @@ function applyPendingVoice(): void {
         <el-button @click="saveStyleOpen = false">取消</el-button>
         <el-button type="primary" @click="saveStyleNow">保存</el-button>
       </template>
+    </el-dialog>
+
+    <!-- 文案模板 -->
+    <el-dialog v-model="scriptOpen" title="场景文案模板" width="720px" top="8vh">
+      <p class="vc-hint" style="margin: 0 0 12px">
+        点一条直接填入文本框，可再手动改。文案里已经带好风格标签，配合合适的音色效果更好。
+      </p>
+      <div class="scene-tabs">
+        <button
+          v-for="g in scriptGroups"
+          :key="g.scene"
+          class="scene-tab"
+          :class="{ active: scriptScene === g.scene }"
+          @click="scriptScene = g.scene"
+        >
+          {{ g.scene }}
+        </button>
+      </div>
+
+      <div class="script-list">
+        <button
+          v-for="s in scriptsOfScene"
+          :key="s.id"
+          class="script-item"
+          @click="applyScript(s)"
+        >
+          <div class="script-top">
+            <span class="script-name">{{ s.name }}</span>
+            <span class="script-usage">{{ s.usage }}</span>
+          </div>
+          <p class="script-text">{{ s.text }}</p>
+          <div class="script-hint">建议音色：{{ s.voiceHint }}</div>
+        </button>
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -923,4 +973,92 @@ function applyPendingVoice(): void {
   border: 1px solid var(--vc-border);
   border-bottom-width: 2px;
   color: var(--vc-text-secondary);
+}
+/* ---------- 文案模板对话框 ---------- */
+.scene-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.scene-tab {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--vc-border);
+  background: var(--vc-bg-elevated);
+  color: var(--vc-text-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color var(--vc-dur-fast) var(--vc-ease),
+    color var(--vc-dur-fast) var(--vc-ease),
+    background-color var(--vc-dur-fast) var(--vc-ease);
+}
+
+.scene-tab:hover {
+  border-color: var(--vc-border-strong);
+  color: var(--vc-text-primary);
+}
+
+.scene-tab.active {
+  border-color: var(--vc-accent);
+  color: var(--vc-accent);
+  background: var(--vc-accent-soft);
+}
+
+.script-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 56vh;
+  overflow-y: auto;
+}
+
+.script-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: var(--vc-radius-sm);
+  border: 1px solid var(--vc-border);
+  background: var(--vc-bg-input);
+  color: var(--vc-text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--vc-dur-fast) var(--vc-ease);
+}
+
+.script-item:hover {
+  border-color: var(--vc-accent);
+}
+
+.script-top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.script-name {
+  font-size: 13.5px;
+  font-weight: 620;
+}
+
+.script-usage {
+  font-size: 11.5px;
+  color: var(--vc-text-muted);
+}
+
+.script-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.72;
+  color: var(--vc-text-secondary);
+}
+
+.script-hint {
+  font-size: 11.5px;
+  color: var(--vc-scope);
 }</style>
