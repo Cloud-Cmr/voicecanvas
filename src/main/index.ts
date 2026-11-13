@@ -165,29 +165,40 @@ function createWindow(): void {
 const inflight = new Map<string, AbortController>()
 
 function registerIpc(): void {
-  ipcMain.handle(IPC.settingsGet, () => getSettings())
-  ipcMain.handle(IPC.settingsUpdate, (_e, patch) => updateSettings(patch))
+  /** 安全注册：重复注册只告警不抛异常，避免一个失误让整个应用白屏 */
+  const registered = new Set<string>()
+  const handle = (channel: string, fn: (...args: any[]) => any) => {
+    if (registered.has(channel)) {
+      console.warn(`[ipc] 重复注册被忽略: ${channel}`)
+      return
+    }
+    registered.add(channel)
+    handle(channel, fn)
+  }
 
-  ipcMain.handle(IPC.probeModels, async () => {
+  handle(IPC.settingsGet, () => getSettings())
+  handle(IPC.settingsUpdate, (_e, patch) => updateSettings(patch))
+
+  handle(IPC.probeModels, async () => {
     const key = await getApiKey()
     if (!key) return { ok: false, message: '尚未配置 API Key' }
     const settings = await getSettings()
     return verifyKey(key, settings.baseUrl)
   })
 
-  ipcMain.handle(IPC.apiKeyTest, async (_e, apiKey?: string) => {
+  handle(IPC.apiKeyTest, async (_e, apiKey?: string) => {
     const key = (apiKey || '').trim() || (await getApiKey())
     if (!key) return { ok: false, message: '请先填写 API Key' }
     const settings = await getSettings()
     return verifyKey(key, settings.baseUrl)
   })
 
-  ipcMain.handle(IPC.apiKeySet, async (_e, apiKey: string) => {
+  handle(IPC.apiKeySet, async (_e, apiKey: string) => {
     await setApiKey(String(apiKey || ''))
     return { ok: true }
   })
 
-  ipcMain.handle(
+  handle(
     IPC.synthRun,
     async (event, req: SynthRequest): Promise<SynthResponse> => {
       const started = Date.now()
@@ -288,7 +299,7 @@ function registerIpc(): void {
     },
   )
 
-  ipcMain.handle(IPC.synthCancel, async (_e, requestId: string) => {
+  handle(IPC.synthCancel, async (_e, requestId: string) => {
     const c = inflight.get(requestId)
     if (c) {
       c.abort()
@@ -298,7 +309,7 @@ function registerIpc(): void {
     return { ok: false, message: '未找到该请求' }
   })
 
-  ipcMain.handle(IPC.fileOpenDialog, async (_e, kind: 'audio' | 'output') => {
+  handle(IPC.fileOpenDialog, async (_e, kind: 'audio' | 'output') => {
     if (kind === 'output') {
       const res = await dialog.showOpenDialog({
         properties: ['openDirectory', 'createDirectory'],
@@ -315,13 +326,13 @@ function registerIpc(): void {
     return { path: p, name: path.basename(p), bytes: stat.size }
   })
 
-  ipcMain.handle(IPC.fileSave, async (_e, src: string, target: string) => {
+  handle(IPC.fileSave, async (_e, src: string, target: string) => {
     await fs.copyFile(src, target)
     return { ok: true }
   })
 
   // ===== 批量合成 =====
-  ipcMain.handle(IPC.fileReadText, async (_e, filePath: string) => {
+  handle(IPC.fileReadText, async (_e, filePath: string) => {
     // 仅允许读取文本类扩展名，防止任意文件读取被滥用
     const ext = path.extname(filePath).toLowerCase()
     if (!['.txt', '.srt', '.lrc', '.md', '.csv'].includes(ext)) {
@@ -331,7 +342,7 @@ function registerIpc(): void {
   })
 
   /** 文本文件选择对话框（供批量导入 SRT/TXT 用） */
-  ipcMain.handle('file:openTextDialog', async () => {
+  handle('file:openTextDialog', async () => {
     const res = await dialog.showOpenDialog({
       properties: ['openFile'],
       filters: [
@@ -344,7 +355,7 @@ function registerIpc(): void {
   })
 
   /** 解析台词文件：按扩展名选规则，返回台词数组（渲染端不再各自实现） */
-  ipcMain.handle('file:parseDialogue', async (_e, filePath: string) => {
+  handle('file:parseDialogue', async (_e, filePath: string) => {
     const content = await fs.readFile(filePath, 'utf8')
     const ext = path.extname(filePath).toLowerCase()
     let lines: string[]
@@ -359,13 +370,13 @@ function registerIpc(): void {
     return lines
   })
 
-  ipcMain.handle(IPC.fileWriteText, async (_e, filePath: string, content: string) => {
+  handle(IPC.fileWriteText, async (_e, filePath: string, content: string) => {
     await fs.writeFile(filePath, content, 'utf8')
     return { ok: true }
   })
 
   /** 保存录音样本：渲染端转好 WAV 字节数组传过来，落到 samples 目录 */
-  ipcMain.handle(
+  handle(
     IPC.fileSaveRecorded,
     async (_e, name: string, bytes: number[]) => {
       try {
@@ -384,7 +395,7 @@ function registerIpc(): void {
   )
 
   /** 音频后期处理：去静音 / 响度归一 / 静音上限 / 增益（产出新文件，不覆盖原件） */
-  ipcMain.handle(
+  handle(
     IPC.audioProcess,
     async (
       _e,
@@ -455,7 +466,7 @@ function registerIpc(): void {
   )
 
   /** 读取音频基本信息（时长、峰值 dB），用于 UI 展示 */
-  ipcMain.handle(IPC.audioInfo, async (_e, filePath: string) => {
+  handle(IPC.audioInfo, async (_e, filePath: string) => {
     try {
       const buf = await fs.readFile(filePath)
       return { ok: true, ...getWavInfo(buf) }
@@ -465,7 +476,7 @@ function registerIpc(): void {
   })
 
   /** 批量导出音频包：选目录 → 复制音频 + 写元数据 txt + 生成索引清单 */
-  ipcMain.handle(IPC.exportAudioPack, async (_e, ids: string[]) => {
+  handle(IPC.exportAudioPack, async (_e, ids: string[]) => {
     try {
       const all = await listHistory()
       const picked = ids.length ? all.filter((r) => ids.includes(r.id)) : all
@@ -485,12 +496,12 @@ function registerIpc(): void {
   })
 
   // ===== 项目工作区 =====
-  ipcMain.handle(IPC.projectList, () => listProjects())
-  ipcMain.handle(IPC.projectGet, (_e, id: string) => getProject(id))
-  ipcMain.handle(IPC.projectSave, (_e, input: any) => saveProject(input))
-  ipcMain.handle(IPC.projectDelete, (_e, id: string) => deleteProject(id))
+  handle(IPC.projectList, () => listProjects())
+  handle(IPC.projectGet, (_e, id: string) => getProject(id))
+  handle(IPC.projectSave, (_e, input: any) => saveProject(input))
+  handle(IPC.projectDelete, (_e, id: string) => deleteProject(id))
 
-  ipcMain.handle(IPC.projectImport, async () => {
+  handle(IPC.projectImport, async () => {
     const res = await dialog.showOpenDialog({
       title: '导入项目文件',
       properties: ['openFile'],
@@ -504,7 +515,7 @@ function registerIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.projectExport, async (_e, id: string, name: string) => {
+  handle(IPC.projectExport, async (_e, id: string, name: string) => {
     const res = await dialog.showSaveDialog({
       title: '导出项目文件',
       defaultPath: `${name || '项目'}.vcpj.json`,
@@ -515,7 +526,7 @@ function registerIpc(): void {
     return { ok, path: res.filePath }
   })
 
-  ipcMain.handle(IPC.batchRun, async (event, req: BatchRunRequest) => {
+  handle(IPC.batchRun, async (event, req: BatchRunRequest) => {
     setBatchRunning(true)
     try {
       return await runBatch(req, {
@@ -528,12 +539,12 @@ function registerIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.batchCancel, (_e, jobId: string) => {
+  handle(IPC.batchCancel, (_e, jobId: string) => {
     return { ok: cancelBatch(jobId) }
   })
 
   // ===== 文本模型辅助（音色描述润色 / 采样文本生成）=====
-  ipcMain.handle(IPC.llmPolish, async (_e, idea: string) => {
+  handle(IPC.llmPolish, async (_e, idea: string) => {
     const apiKey = await getApiKey()
     if (!apiKey) throw new TtsError('E_NO_KEY', '尚未配置 API Key')
     const settings = await getSettings()
@@ -543,7 +554,7 @@ function registerIpc(): void {
     })
   })
 
-  ipcMain.handle(IPC.llmSampleText, async (_e, description: string) => {
+  handle(IPC.llmSampleText, async (_e, description: string) => {
     const apiKey = await getApiKey()
     if (!apiKey) throw new TtsError('E_NO_KEY', '尚未配置 API Key')
     const settings = await getSettings()
@@ -554,7 +565,7 @@ function registerIpc(): void {
   })
 
   // ===== ASR 转写 =====
-  ipcMain.handle(
+  handle(
     IPC.asrTranscribe,
     async (_e, payload: { path: string }): Promise<AsrResponse> => {
       try {
@@ -586,14 +597,14 @@ function registerIpc(): void {
   )
 
   // ===== 风格方案 =====
-  ipcMain.handle(IPC.styleList, () => listStyles())
-  ipcMain.handle(IPC.styleSave, (_e, input: Omit<StylePreset, 'id' | 'createdAt'> & { id?: string }) =>
+  handle(IPC.styleList, () => listStyles())
+  handle(IPC.styleSave, (_e, input: Omit<StylePreset, 'id' | 'createdAt'> & { id?: string }) =>
     saveStyle(input),
   )
-  ipcMain.handle(IPC.styleRemove, (_e, id: string) => removeStyle(id))
+  handle(IPC.styleRemove, (_e, id: string) => removeStyle(id))
 
   // ===== 时间戳配音：按 [mm:ss] 时间轴逐段合成 + 总轨摆放 =====
-  ipcMain.handle(
+  handle(
     IPC.synthTimeline,
     async (event, req: TimelineRequest): Promise<TimelineResponse> => {
       const apiKey = await getApiKey()
@@ -676,15 +687,8 @@ function registerIpc(): void {
     },
   )
 
-  // ===== 风格方案 =====（原位置）
-  ipcMain.handle(IPC.styleList, () => listStyles())
-  ipcMain.handle(IPC.styleSave, (_e, input: Omit<StylePreset, 'id' | 'createdAt'> & { id?: string }) =>
-    saveStyle(input),
-  )
-  ipcMain.handle(IPC.styleRemove, (_e, id: string) => removeStyle(id))
-
   // ===== 长文本分段合成：多段按序合成 + WAV 拼接 =====
-  ipcMain.handle(IPC.synthRunLong, async (event, base: SynthRequest, segments: string[]) => {
+  handle(IPC.synthRunLong, async (event, base: SynthRequest, segments: string[]) => {
     const apiKey = await getApiKey()
     if (!apiKey) return { ok: false, code: 'E_NO_KEY', message: '尚未配置 API Key' }
     const settings = await getSettings()
@@ -759,7 +763,7 @@ function registerIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.historyExport, async (_e, format: ExportFormat) => {
+  handle(IPC.historyExport, async (_e, format: ExportFormat) => {
     const records = await listHistory()
     const res = await dialog.showSaveDialog({
       defaultPath: `voicecanvas-history-${new Date().toISOString().slice(0, 10)}.${format}`,
@@ -794,19 +798,19 @@ function registerIpc(): void {
     return { path: res.filePath, count: records.length }
   })
 
-  ipcMain.handle(IPC.fileReveal, async (_e, target: string) => {
+  handle(IPC.fileReveal, async (_e, target: string) => {
     shell.showItemInFolder(target)
     return { ok: true }
   })
 
-  ipcMain.handle(IPC.voicesList, () => listVoices())
-  ipcMain.handle(IPC.voicesUpsert, (_e, input: Partial<VoiceAsset>) =>
+  handle(IPC.voicesList, () => listVoices())
+  handle(IPC.voicesUpsert, (_e, input: Partial<VoiceAsset>) =>
     upsertVoice(input as any),
   )
-  ipcMain.handle(IPC.voicesRemove, (_e, id: string) => removeVoice(id))
+  handle(IPC.voicesRemove, (_e, id: string) => removeVoice(id))
 
-  ipcMain.handle(IPC.historyList, () => listHistory())
-  ipcMain.handle(IPC.historyRemove, (_e, id: string) => removeHistory(id))
+  handle(IPC.historyList, () => listHistory())
+  handle(IPC.historyRemove, (_e, id: string) => removeHistory(id))
 }
 
 app.whenReady().then(() => {

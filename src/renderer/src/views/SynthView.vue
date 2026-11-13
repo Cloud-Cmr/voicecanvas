@@ -260,11 +260,18 @@ function buildRequest(): SynthRequest | null {
     return null
   }
 
+  // 语速倾向与手动指令合并：手动写了就只用手动的
+  const speedText = SPEED_TEXT[speedPreset.value] || ''
+  const finalInstruction =
+    instruction.value.trim() ||
+    (speedText ? `${speedText}。${body.length > 100 ? '整体语速保持均匀' : ''}` : '') ||
+    undefined
+
   if (mode.value === 'preset') {
     return {
       mode: 'preset',
       text: body,
-      instruction: instruction.value.trim() || undefined,
+      instruction: finalInstruction,
       voiceId: presetVoiceId.value,
       format: format.value,
       stream: canStream.value && stream.value,
@@ -430,6 +437,21 @@ useShortcuts([
   },
 ])
 
+// ---------- 语速倾向：转成风格指令前缀 ----------
+const speedPreset = ref<'normal' | 'slow' | 'fast' | 'veryslow'>('normal')
+const speedOptions = [
+  { value: 'veryslow', label: '很慢' },
+  { value: 'slow', label: '慢' },
+  { value: 'normal', label: '正常' },
+  { value: 'fast', label: '快' },
+]
+const SPEED_TEXT: Record<string, string> = {
+  veryslow: '语速极慢，句间停顿明显',
+  slow: '语速稍慢，从容一些',
+  normal: '',
+  fast: '语速稍快，节奏紧凑',
+}
+
 // ---------- 文案模板 ----------
 const scriptOpen = ref(false)
 const scriptGroups = groupScripts()
@@ -573,6 +595,21 @@ function applyPendingVoice(): void {
           <p class="vc-hint">
             {{ FORMAT_OPTIONS.find((f) => f.value === format)?.desc }}
           </p>
+
+          <div class="stream-row">
+            <div>
+              <div class="stream-title">语速倾向</div>
+              <p class="vc-hint" style="margin: 0">
+                自动转成风格指令的一部分；写了自定义风格指令时以手动输入为准。
+              </p>
+            </div>
+            <el-segmented
+              v-model="speedPreset"
+              :options="speedOptions"
+              size="small"
+              :disabled="loading"
+            />
+          </div>
 
           <div class="stream-row">
             <div>

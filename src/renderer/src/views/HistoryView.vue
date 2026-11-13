@@ -31,6 +31,7 @@ const loading = ref(true)
 const activeFilter = ref<'all' | TtsMode>('all')
 const keyword = ref('')
 const clearing = ref(false)
+const onlyFav = ref(false)
 
 /** 当前正在试听的记录，null 表示没有展开的播放器 */
 const playingRecord = ref<GenerationRecord | null>(null)
@@ -39,6 +40,7 @@ const filtered = computed<GenerationRecord[]>(() => {
   const kw = keyword.value.trim().toLowerCase()
   return records.value.filter((r) => {
     if (activeFilter.value !== 'all' && r.mode !== activeFilter.value) return false
+    if (onlyFav.value && !favorites.value.has(r.id)) return false
     if (!kw) return true
     const haystack = [r.text, r.instruction ?? '', r.voiceName ?? '', r.filePath]
       .join(' ')
@@ -251,6 +253,27 @@ async function exportHistory(format: 'csv' | 'json') {
   }
 }
 
+// ---------- 收藏（localStorage 持久化，只存 id 集合） ----------
+const FAV_KEY = 'vc.favorites'
+const favorites = ref<Set<string>>(new Set())
+
+function loadFavorites() {
+  try {
+    const raw = localStorage.getItem(FAV_KEY)
+    if (raw) favorites.value = new Set(JSON.parse(raw) as string[])
+  } catch {
+    favorites.value = new Set()
+  }
+}
+
+function toggleFav(r: GenerationRecord) {
+  const next = new Set(favorites.value)
+  if (next.has(r.id)) next.delete(r.id)
+  else next.add(r.id)
+  favorites.value = next
+  localStorage.setItem(FAV_KEY, JSON.stringify([...next]))
+}
+
 // ---------- 导出音频包（带元数据与清单）----------
 const selectedRows = ref<GenerationRecord[]>([])
 const packing = ref(false)
@@ -279,7 +302,10 @@ async function exportPack() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  loadFavorites()
+  void load()
+})
 </script>
 
 <template>
@@ -291,6 +317,9 @@ onMounted(load)
           {{ f.label }}（{{ counts[f.value] }}）
         </el-radio-button>
       </el-radio-group>
+      <el-checkbox v-model="onlyFav" size="small" style="margin-left: 8px">
+        只看收藏（{{ favorites.size }}）
+      </el-checkbox>
       <el-input
         v-model="keyword"
         class="search"
@@ -448,11 +477,19 @@ onMounted(load)
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="188" fixed="right">
+      <el-table-column label="操作" width="232" fixed="right">
         <template #default="{ row }">
           <div class="row-actions">
             <el-button size="small" link type="primary" @click="togglePlay(row)">
               {{ playingRecord?.id === row.id ? '收起' : '播放' }}
+            </el-button>
+            <el-button
+              size="small"
+              link
+              :type="favorites.has(row.id) ? 'warning' : 'default'"
+              @click="toggleFav(row)"
+            >
+              {{ favorites.has(row.id) ? '★' : '☆' }}
             </el-button>
             <el-button size="small" link @click="reveal(row)">打开位置</el-button>
             <el-button size="small" link type="danger" @click="removeOne(row)">
