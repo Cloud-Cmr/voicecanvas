@@ -30,7 +30,12 @@ import {
   DEFAULT_BASE_URL,
 } from './providers/mimo'
 import { runBatch, cancelBatch, parseSrt, parseTxt } from './batch'
-import { polishVoiceDescription, generateSampleText, DEFAULT_LLM_MODEL } from './providers/llm'
+import {
+  polishVoiceDescription,
+  generateSampleText,
+  parseScriptWithAI,
+  DEFAULT_LLM_MODEL,
+} from './providers/llm'
 import { concatWavs, buildTimelineWav, type TimelineItem } from './wav'
 import { trimEdges, normalizePeak, capSilence, applyGain, getWavInfo } from './audiofx'
 import { fadeInOut, changeSpeed } from './audiofx2'
@@ -173,7 +178,8 @@ function registerIpc(): void {
       return
     }
     registered.add(channel)
-    handle(channel, fn)
+    // 注意：这里必须调 ipcMain.handle，不能写成 handle（会无限递归）
+    ipcMain.handle(channel, fn)
   }
 
   handle(IPC.settingsGet, () => getSettings())
@@ -564,6 +570,18 @@ function registerIpc(): void {
     })
   })
 
+  // ===== AI 剧本解析（任意格式的时间+角色）=====
+  handle(IPC.llmParseScript, async (_e, raw: string) => {
+    const apiKey = await getApiKey()
+    if (!apiKey) throw new TtsError('E_NO_KEY', '尚未配置 API Key')
+    if (!raw?.trim()) throw new TtsError('E_EMPTY', '剧本内容为空')
+    const settings = await getSettings()
+    return parseScriptWithAI(raw, {
+      apiKey,
+      baseUrl: settings.baseUrl ?? undefined,
+    })
+  })
+
   // ===== ASR 转写 =====
   handle(
     IPC.asrTranscribe,
@@ -618,12 +636,18 @@ function registerIpc(): void {
         const placedStr: string[] = []
         for (let i = 0; i < req.cues.length; i++) {
           const cue = req.cues[i]
+          // 音色优先级：单条覆盖 > 角色映射 > 全局
+          const voiceForCue =
+            cue.voiceId ||
+            (cue.role && req.roleVoices?.[cue.role]) ||
+            req.voiceId ||
+            'mimo_default'
           const raw = await synthesize(
             {
               mode: 'preset',
               text: cue.text,
               instruction: req.instruction,
-              voiceId: req.voiceId || 'mimo_default',
+              voiceId: voiceForCue,
               format: 'wav',
             },
             { apiKey, baseUrl: settings.baseUrl ?? undefined, models: settings.models },
@@ -637,6 +661,8 @@ function registerIpc(): void {
               index: i,
               total: req.cues.length,
               placedAt: cue.time,
+              role: cue.role,
+              voiceId: voiceForCue,
               elapsedMs: Date.now() - started,
             })
           }

@@ -156,6 +156,7 @@ export const IPC = {
   llmPolish: 'llm:polishDescription',
   llmSampleText: 'llm:generateSampleText',
   llmSplitText: 'llm:splitLongText',
+  llmParseScript: 'llm:parseScript',
   asrTranscribe: 'asr:transcribe',
   styleList: 'style:list',
   styleSave: 'style:save',
@@ -281,6 +282,10 @@ export interface TimelineCue {
   /** 时间点 mm:ss 或 mm:ss.ms */
   time: string
   text: string
+  /** 角色名（可选，用于多音色分配） */
+  role?: string
+  /** 该条的音色覆盖（优先于全局） */
+  voiceId?: string
 }
 
 /** 时间戳配音请求 */
@@ -289,6 +294,8 @@ export interface TimelineRequest {
   mode: 'preset'
   voiceId?: string
   instruction?: string
+  /** 角色 → 音色 ID 映射（多角色配音） */
+  roleVoices?: Record<string, string>
 }
 
 /** 时间轴进度事件 */
@@ -297,6 +304,10 @@ export interface TimelineProgressEvent {
   total: number
   /** 该段合成后实际摆放的时间点（mm:ss） */
   placedAt?: string
+  /** 该段的角色名 */
+  role?: string
+  /** 该段使用的音色 ID */
+  voiceId?: string
   elapsedMs: number
 }
 

@@ -183,6 +183,9 @@ const api = {
     /** 根据音色描述生成适配的合成文本 */
     generateSampleText: (description: string): Promise<string> =>
       ipcRenderer.invoke(IPC.llmSampleText, description),
+    /** 用 AI 解析任意格式的剧本（时间+角色），比正则更可靠 */
+    parseScript: (raw: string): Promise<any> =>
+      ipcRenderer.invoke(IPC.llmParseScript, raw),
   },
   asr: {
     /** 语音转文字（mimo-v2.5-asr），传本地音频绝对路径 */
