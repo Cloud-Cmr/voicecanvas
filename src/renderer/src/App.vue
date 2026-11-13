@@ -37,27 +37,55 @@ interface NavItem {
   desc: string
 }
 
-const navItems: NavItem[] = [
-  { key: 'synth', label: '语音合成', desc: '预置音色快速出稿' },
-  { key: 'design', label: '音色设计', desc: '用文字创造新声音' },
-  { key: 'clone', label: '音色克隆', desc: '用样本复刻音色' },
-  { key: 'batch', label: '批量工作台', desc: '台词表一键批量生成' },
-  { key: 'timeline', label: '时间戳配音', desc: '按时间点摆声音出 LRC' },
-  { key: 'compare', label: '音色对比', desc: '一段文本听多个音色' },
-  { key: 'projects', label: '项目工作区', desc: '多次配音集中管理' },
-  { key: 'transcript', label: '听写转写', desc: '音频转文字（ASR）' },
-  { key: 'follow', label: '朗读跟读', desc: '听示范·录自己·对比' },
-  { key: 'dub', label: '视频字幕配音', desc: '识别字幕·按轴配音' },
-  { key: 'voices', label: '我的音色', desc: '已保存的音色资产' },
-  { key: 'history', label: '生成历史', desc: '最近生成过的音频' },
-  { key: 'settings', label: '设置', desc: 'API 与输出选项' },
+interface NavGroup {
+  title?: string
+  items: Array<{ key: TabKey; label: string; desc: string }>
+}
+
+const navGroups: NavGroup[] = [
+  {
+    items: [
+      { key: 'synth', label: '语音合成', desc: '预置音色快速出稿' },
+      { key: 'design', label: '音色设计', desc: '用文字创造新声音' },
+      { key: 'clone', label: '音色克隆', desc: '用样本复刻音色' },
+    ],
+  },
+  {
+    title: '批量与项目',
+    items: [
+      { key: 'batch', label: '批量工作台', desc: '台词表一键批量生成' },
+      { key: 'timeline', label: '时间戳配音', desc: '按时间点摆声音出 LRC' },
+      { key: 'compare', label: '音色对比', desc: '一段文本听多个音色' },
+      { key: 'projects', label: '项目工作区', desc: '多次配音集中管理' },
+    ],
+  },
+  {
+    title: '工具',
+    items: [
+      { key: 'transcript', label: '听写转写', desc: '音频转文字（ASR）' },
+      { key: 'follow', label: '朗读跟读', desc: '听示范·录自己·对比' },
+      { key: 'dub', label: '视频字幕配音', desc: '识别字幕·按轴配音' },
+    ],
+  },
+  {
+    title: '资产',
+    items: [
+      { key: 'voices', label: '我的音色', desc: '已保存的音色资产' },
+      { key: 'history', label: '生成历史', desc: '最近生成过的音频' },
+    ],
+  },
+  {
+    title: '',
+    items: [{ key: 'settings', label: '设置', desc: 'API 与输出选项' }],
+  },
 ]
 
 const active = ref<TabKey>('synth')
 const hasApiKey = ref(true)
 const showGuide = ref(false)
 
-const current = computed(() => navItems.find((n) => n.key === active.value)!)
+const flatItems = computed(() => navGroups.flatMap((g) => g.items))
+const current = computed(() => flatItems.value.find((n) => n.key === active.value)!)
 
 onMounted(async () => {
   try {
@@ -90,7 +118,7 @@ const tabOrder: TabKey[] = [
 useShortcuts([
   ...tabOrder.map((k, i) => ({
     keys: `ctrl+${i + 1}`,
-    label: `切到${navItems.find((n) => n.key === k)?.label}`,
+    label: `切到${flatItems.value.find((n) => n.key === k)?.label}`,
     handler: () => go(k),
   })),
   { keys: 'ctrl+,', label: '打开设置', handler: () => go('settings') },
@@ -108,7 +136,16 @@ async function onKeySaved() {
     <TitleBar />
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark">声</div>
+        <!-- 品牌：细线声波图形代替色块字（去 AI 味：不用彩色圆角块+单字） -->
+        <svg class="brand-logo" viewBox="0 0 32 32" width="30" height="30" fill="none" aria-hidden="true">
+          <!-- 一组不对称的细声波线，末端渐收，像一段被画下来的声音 -->
+          <path d="M5 12v8"  stroke="var(--vc-accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.55" />
+          <path d="M9 8.5v15" stroke="var(--vc-accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.75" />
+          <path d="M13 5.5v21" stroke="var(--vc-accent)" stroke-width="1.6" stroke-linecap="round" />
+          <path d="M17 8.5v15" stroke="var(--vc-accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.85" />
+          <path d="M21 11v10" stroke="var(--vc-accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.65" />
+          <path d="M25 13.5v5" stroke="var(--vc-accent)" stroke-width="1.6" stroke-linecap="round" opacity="0.45" />
+        </svg>
         <div class="brand-text">
           <div class="brand-name">声绘</div>
           <div class="brand-en">VoiceCanvas</div>
@@ -116,8 +153,10 @@ async function onKeySaved() {
       </div>
 
       <nav class="nav">
+      <template v-for="g in navGroups" :key="g.title || 'core'">
+        <div v-if="g.title" class="nav-group-title">{{ g.title }}</div>
         <button
-          v-for="item in navItems"
+          v-for="item in g.items"
           :key="item.key"
           class="nav-item"
           :class="{ active: active === item.key }"
@@ -157,7 +196,9 @@ async function onKeySaved() {
             <span class="nav-desc">{{ item.desc }}</span>
           </span>
         </button>
-      </nav>
+      
+      </template>
+    </nav>
 
       <div class="sidebar-foot">
         <div v-if="!hasApiKey" class="warn-chip" @click="go('settings')">
@@ -255,34 +296,22 @@ async function onKeySaved() {
   -webkit-app-region: drag; /* 品牌区也可拖动窗口 */
 }
 
-.brand-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--vc-radius-sm);
-  /* VU 表指针的琥珀铜渐变，呼应「声绘」把声音画出来的隐喻 */
-  background: linear-gradient(150deg, var(--vc-accent-bright), var(--vc-accent-dim));
-  color: #1a1408;
-  font-weight: 700;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow:
-    0 0 20px var(--vc-accent-glow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+.brand-logo {
+  flex-shrink: 0;
 }
 
 .brand-name {
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
+  font-size: 15.5px;
+  font-weight: 680;
+  letter-spacing: 0.14em; /* 中文人名式字距，比默认更有标识感 */
 }
 
 .brand-en {
-  font-size: 11.5px;
+  font-size: 10px;
   color: var(--vc-text-faint);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
+  margin-top: 1px;
 }
 
 .nav {
@@ -483,5 +512,13 @@ async function onKeySaved() {
 .guide-list a {
   color: var(--vc-accent);
   text-decoration: none;
+}
+
+.nav-group-title {
+  font-size: 10px;
+  color: var(--vc-text-faint);
+  letter-spacing: 0.14em;
+  padding: 12px 10px 4px;
+  user-select: none;
 }
 </style>
