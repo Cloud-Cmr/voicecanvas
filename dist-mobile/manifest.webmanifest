@@ -1,7 +1,7 @@
 {
   "name": "声绘 VoiceCanvas",
   "short_name": "声绘",
-  "description": "移动�?AI 语音工作台，适配小米 MiMo TTS",
+  "description": "移动端 AI 语音工作台，适配小米 MiMo TTS",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f1013",
