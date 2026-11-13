@@ -11,6 +11,8 @@ const testing = ref(false)
 const testMsg = ref('')
 const testOk = ref(false)
 
+const emit = defineEmits<{ (e: 'saved'): void }>()
+
 onMounted(async () => {
   settings.value = await api.settings.get()
 })
@@ -22,6 +24,7 @@ async function saveKey() {
   keyInput.value = ''
   settings.value = await api.settings.get()
   ElMessage.success('API Key 已保存')
+  emit('saved')
 }
 
 async function test() {

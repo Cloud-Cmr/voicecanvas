@@ -125,6 +125,24 @@ function saveBlobUrl(blob: Blob): string {
   return URL.createObjectURL(blob)
 }
 
+/**
+ * UUID 生成：crypto.randomUUID 只在安全上下文（HTTPS/localhost）可用，
+ * file:// 打开的 PWA 不算安全上下文，必须有 fallback。
+ */
+function genId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID()
+    }
+  } catch {
+    /* 继续用 fallback */
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
 // ============ 浏览器模式的设置 ============
 
 function webGetSettings(): AppSettings {
@@ -192,7 +210,7 @@ export const api = {
         // 浏览器模式的历史记录
         const hist = lsGet<GenerationRecord[]>(LS_HISTORY, [])
         const rec: GenerationRecord = {
-          id: crypto.randomUUID(),
+          id: genId(),
           mode: req.mode,
           text: req.text,
           instruction: req.instruction,
@@ -317,7 +335,7 @@ export const api = {
       const now = Date.now()
       const asset: VoiceAsset = {
         ...(input as VoiceAsset),
-        id: input.id || crypto.randomUUID(),
+        id: input.id || genId(),
         createdAt: now,
         updatedAt: now,
       }
@@ -381,7 +399,7 @@ export const api = {
     save: async (input: any): Promise<StylePreset> => {
       if (isElectron) return window.vc.styles.save(input)
       const list = lsGet<StylePreset[]>(LS_STYLES, [])
-      const preset: StylePreset = { ...input, id: crypto.randomUUID(), createdAt: Date.now() }
+      const preset: StylePreset = { ...input, id: genId(), createdAt: Date.now() }
       list.push(preset)
       lsSet(LS_STYLES, list)
       return preset

@@ -2,33 +2,54 @@
 /**
  * 移动端 App（PWA / APK 共用）
  *
- * 设计取舍：手机屏幕放不下桌面那 9 个页面，
- * 只保留最核心的四件事：合成、设计、我的音色、设置。
+ * 手机端与桌面端功能对齐：合成、音色设计、我的音色、听写转写、设置。
+ * hasKey 全局响应式：设置页保存 Key 后所有页面立即更新。
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, provide, readonly } from 'vue'
 import MHome from './views/mobile/MHome.vue'
 import MDesign from './views/mobile/MDesign.vue'
 import MVoice from './views/mobile/MVoice.vue'
+import MTranscript from './views/mobile/MTranscript.vue'
 import MSettings from './views/mobile/MSettings.vue'
-import { api } from './platform'
+import { api, isWeb } from './platform'
 
-type Tab = 'home' | 'design' | 'voice' | 'settings'
+type Tab = 'home' | 'design' | 'voice' | 'transcript' | 'settings'
 
 const tabs: Array<{ key: Tab; label: string }> = [
   { key: 'home', label: '合成' },
   { key: 'design', label: '音色' },
   { key: 'voice', label: '我的' },
+  { key: 'transcript', label: '转写' },
   { key: 'settings', label: '设置' },
 ]
 
 const active = ref<Tab>('home')
 const current = computed(() => tabs.find((t) => t.key === active.value)!)
-const hasKey = ref(true)
 
-onMounted(async () => {
-  const s = await api.settings.get()
-  hasKey.value = s.hasApiKey
+/** 全局 Key 状态：provide 给所有子页面（响应式） */
+const hasKey = ref(true)
+const keyVersion = ref(0) // 保存 Key 后 +1，触发子页面重新读取
+provide('hasKey', readonly(hasKey))
+provide('refreshKey', () => {
+  api.settings
+    .get()
+    .then((s) => {
+      hasKey.value = s.hasApiKey
+      keyVersion.value++
+    })
+    .catch(() => {})
 })
+
+async function refreshKey() {
+  try {
+    const s = await api.settings.get()
+    hasKey.value = s.hasApiKey
+  } catch {
+    hasKey.value = false
+  }
+}
+
+onMounted(refreshKey)
 
 function switchTo(t: Tab) {
   active.value = t
@@ -42,8 +63,10 @@ function switchTo(t: Tab) {
       <p class="m-header-desc">
         {{ active === 'home' ? '选音色，输入文字，生成语音' : '' }}
         {{ active === 'design' ? '用一段描述造一个新声音' : '' }}
-        {{ active === 'voice' ? '已保存的音色' : '' }}
+        {{ active === 'voice' ? '已保存的音色资产' : '' }}
+        {{ active === 'transcript' ? '音频转文字（ASR）' : '' }}
         {{ active === 'settings' ? 'API Key 与输出' : '' }}
+        {{ isWeb ? ' · 浏览器模式' : '' }}
       </p>
     </header>
 
@@ -60,7 +83,8 @@ function switchTo(t: Tab) {
       <MHome v-if="active === 'home'" @need-key="switchTo('settings')" @to-design="switchTo('design')" />
       <MDesign v-else-if="active === 'design'" @need-key="switchTo('settings')" />
       <MVoice v-else-if="active === 'voice'" @need-key="switchTo('settings')" />
-      <MSettings v-else-if="active === 'settings'" />
+      <MTranscript v-else-if="active === 'transcript'" @need-key="switchTo('settings')" />
+      <MSettings v-else-if="active === 'settings'" @saved="refreshKey" />
     </div>
 
     <nav class="m-tabbar">
@@ -82,6 +106,10 @@ function switchTo(t: Tab) {
           </template>
           <template v-else-if="t.key === 'voice'">
             <path d="M4 6.5A2 2 0 0 1 6 4.5h3l1.5 2H18a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-10Z" />
+          </template>
+          <template v-else-if="t.key === 'transcript'">
+            <path d="M12 3a7 7 0 0 0-7 7v4a5 5 0 0 0 10 0v-4a7 7 0 0 0-3-5.7" />
+            <path d="M19 10v4a5 5 0 0 1-5 5" />
           </template>
           <template v-else>
             <circle cx="12" cy="12" r="3" />

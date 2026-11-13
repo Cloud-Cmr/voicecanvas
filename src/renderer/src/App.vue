@@ -8,6 +8,7 @@ import TimelineView from './views/TimelineView.vue'
 import CompareView from './views/CompareView.vue'
 import ProjectView from './views/ProjectView.vue'
 import TranscriptView from './views/TranscriptView.vue'
+import FollowView from './views/FollowView.vue'
 import VoiceLibraryView from './views/VoiceLibraryView.vue'
 import HistoryView from './views/HistoryView.vue'
 import SettingsView from './views/SettingsView.vue'
@@ -22,6 +23,7 @@ type TabKey =
   | 'compare'
   | 'projects'
   | 'transcript'
+  | 'follow'
   | 'voices'
   | 'history'
   | 'settings'
@@ -41,6 +43,7 @@ const navItems: NavItem[] = [
   { key: 'compare', label: '音色对比', desc: '一段文本听多个音色' },
   { key: 'projects', label: '项目工作区', desc: '多次配音集中管理' },
   { key: 'transcript', label: '听写转写', desc: '音频转文字（ASR）' },
+  { key: 'follow', label: '朗读跟读', desc: '听示范·录自己·对比' },
   { key: 'voices', label: '我的音色', desc: '已保存的音色资产' },
   { key: 'history', label: '生成历史', desc: '最近生成过的音频' },
   { key: 'settings', label: '设置', desc: 'API 与输出选项' },
