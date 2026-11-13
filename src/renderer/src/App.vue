@@ -9,6 +9,7 @@ import CompareView from './views/CompareView.vue'
 import ProjectView from './views/ProjectView.vue'
 import TranscriptView from './views/TranscriptView.vue'
 import FollowView from './views/FollowView.vue'
+import DubView from './views/DubView.vue'
 import VoiceLibraryView from './views/VoiceLibraryView.vue'
 import HistoryView from './views/HistoryView.vue'
 import SettingsView from './views/SettingsView.vue'
@@ -25,6 +26,7 @@ type TabKey =
   | 'projects'
   | 'transcript'
   | 'follow'
+  | 'dub'
   | 'voices'
   | 'history'
   | 'settings'
@@ -45,6 +47,7 @@ const navItems: NavItem[] = [
   { key: 'projects', label: '项目工作区', desc: '多次配音集中管理' },
   { key: 'transcript', label: '听写转写', desc: '音频转文字（ASR）' },
   { key: 'follow', label: '朗读跟读', desc: '听示范·录自己·对比' },
+  { key: 'dub', label: '视频字幕配音', desc: '识别字幕·按轴配音' },
   { key: 'voices', label: '我的音色', desc: '已保存的音色资产' },
   { key: 'history', label: '生成历史', desc: '最近生成过的音频' },
   { key: 'settings', label: '设置', desc: 'API 与输出选项' },
@@ -184,6 +187,7 @@ async function onKeySaved() {
         <TimelineView v-else-if="active === 'timeline'" @need-key="go('settings')" />
         <CompareView v-else-if="active === 'compare'" @need-key="go('settings')" />
         <TranscriptView v-else-if="active === 'transcript'" @need-key="go('settings')" />
+        <DubView v-else-if="active === 'dub'" @need-key="go('settings')" />
         <VoiceLibraryView v-else-if="active === 'voices'" @use-voice="go('synth')" />
         <HistoryView v-else-if="active === 'history'" />
         <SettingsView v-else-if="active === 'settings'" @saved="onKeySaved" />

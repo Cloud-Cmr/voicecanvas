@@ -41,6 +41,12 @@ import { trimEdges, normalizePeak, capSilence, applyGain, getWavInfo } from './a
 import { fadeInOut, changeSpeed } from './audiofx2'
 import { exportBatch } from './exporter'
 import {
+  whisperInstalled,
+  downloadWhisperBin,
+  downloadWhisperModel,
+  transcribeLocal,
+} from './whisper'
+import {
   listProjects,
   getProject,
   saveProject,
@@ -512,6 +518,24 @@ function registerIpc(): void {
     } catch (e: any) {
       return { ok: false, message: e?.message || String(e) }
     }
+  })
+
+  // ===== whisper 本地语音识别 =====
+  handle(IPC.whisperStatus, () => whisperInstalled('base'))
+  handle(IPC.whisperDownloadBin, async (event) => {
+    await downloadWhisperBin((pct) => {
+      if (!event.sender.isDestroyed()) event.sender.send('whisper:dlProgress', pct)
+    })
+    return { ok: true }
+  })
+  handle(IPC.whisperDownloadModel, async (event, model: string) => {
+    await downloadWhisperModel(model as any, (pct) => {
+      if (!event.sender.isDestroyed()) event.sender.send('whisper:dlProgress', pct)
+    })
+    return { ok: true }
+  })
+  handle(IPC.whisperTranscribe, async (_e, payload: { audioPath: string; model: string }) => {
+    return transcribeLocal(payload.audioPath, payload.model as any)
   })
 
   // ===== 项目工作区 =====

@@ -38,7 +38,8 @@ app.whenReady().then(async () => {
         synth: '语音合成', design: '音色设计', clone: '音色克隆', batch: '批量工作台',
         timeline: '时间戳配音', compare: '音色对比', projects: '项目工作区',
         transcript: '听写转写',
-        follow: '朗读跟读', voices: '我的音色', history: '生成历史', settings: '设置'
+        follow: '朗读跟读',
+        dub: '视频字幕配音', voices: '我的音色', history: '生成历史', settings: '设置'
       };
       const label = map[target] || '语音合成';
       const btns = Array.from(document.querySelectorAll('.nav-item'));

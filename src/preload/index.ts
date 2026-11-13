@@ -175,6 +175,32 @@ const api = {
     isMaximized: (): Promise<boolean | undefined> =>
       ipcRenderer.invoke(IPC.winIsMaximized),
   },
+  whisper: {
+    status: (): Promise<{ bin: boolean; model: boolean }> =>
+      ipcRenderer.invoke(IPC.whisperStatus),
+    downloadBin: (onPct: (pct: number) => void): Promise<void> => {
+      const handler = (_e: unknown, pct: number) => onPct(pct)
+      ipcRenderer.on('whisper:dlProgress', handler)
+      return ipcRenderer.invoke(IPC.whisperDownloadBin).finally(() => {
+        ipcRenderer.removeListener('whisper:dlProgress', handler)
+      })
+    },
+    downloadModel: (
+      model: string,
+      onPct: (pct: number) => void,
+    ): Promise<void> => {
+      const handler = (_e: unknown, pct: number) => onPct(pct)
+      ipcRenderer.on('whisper:dlProgress', handler)
+      return ipcRenderer
+        .invoke(IPC.whisperDownloadModel, model)
+        .finally(() => ipcRenderer.removeListener('whisper:dlProgress', handler))
+    },
+    transcribe: (
+      audioPath: string,
+      model: string,
+    ): Promise<any> =>
+      ipcRenderer.invoke(IPC.whisperTranscribe, { audioPath, model }),
+  },
   projects: {
     list: (): Promise<any[]> => ipcRenderer.invoke(IPC.projectList),
     get: (id: string): Promise<any | null> => ipcRenderer.invoke(IPC.projectGet, id),

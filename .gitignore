@@ -60,3 +60,7 @@ $RECYCLE.BIN/
 coverage/
 .eslintcache
 .vite/
+
+tools/whisper/*.bin
+tools/whisper/*.zip
+whisper-rel*.json
