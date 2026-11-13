@@ -167,6 +167,14 @@ const api = {
     models: (): Promise<{ ok: boolean; models?: string[]; message?: string }> =>
       ipcRenderer.invoke(IPC.probeModels),
   },
+  window: {
+    minimize: (): Promise<void> => ipcRenderer.invoke(IPC.winMinimize),
+    toggleMaximize: (): Promise<boolean | undefined> =>
+      ipcRenderer.invoke(IPC.winMaximize),
+    close: (): Promise<void> => ipcRenderer.invoke(IPC.winClose),
+    isMaximized: (): Promise<boolean | undefined> =>
+      ipcRenderer.invoke(IPC.winIsMaximized),
+  },
   projects: {
     list: (): Promise<any[]> => ipcRenderer.invoke(IPC.projectList),
     get: (id: string): Promise<any | null> => ipcRenderer.invoke(IPC.projectGet, id),

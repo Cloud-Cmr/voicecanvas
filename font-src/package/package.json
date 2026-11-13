@@ -1,0 +1,41 @@
+{
+  "name": "misans",
+  "version": "5.0.0",
+  "description": "MiSans (subsetted) fonts from Xiaomi for free commercial use.",
+  "keywords": [
+    "font",
+    "misans",
+    "webfont",
+    "woff2"
+  ],
+  "homepage": "https://github.com/dsrkafuu/misans#readme",
+  "license": "Apache-2.0",
+  "author": "DSRKafuU (https://dsrkafuu.net/)",
+  "repository": "github:dsrkafuu/misans",
+  "style": "./lib/Normal/MiSansVF.min.css",
+  "files": [
+    "lib",
+    "raw/*.json"
+  ],
+  "type": "module",
+  "main": "./lib/Normal/MiSansVF.min.css",
+  "unpkg": "./lib/Normal/MiSansVF.min.css",
+  "jsdelivr": "./lib/Normal/MiSansVF.min.css",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "fetch": "bun ./scripts/fetch.js",
+    "build": "bun ./scripts/build.js",
+    "check": "bun ./scripts/check.js",
+    "docs": "bun ./scripts/docs.js",
+    "serve": "bun ./scripts/serve.js"
+  },
+  "devDependencies": {
+    "fontkit": "^2.0.4",
+    "html-minifier-terser": "^7.2.0",
+    "oxfmt": "^0.68.0",
+    "subset-font": "^2.7.0",
+    "wawoff2": "^2.0.1"
+  }
+}

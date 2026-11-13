@@ -108,9 +108,12 @@ function createWindow(): void {
     minWidth: 1040,
     minHeight: 680,
     show: false,
-    backgroundColor: '#131417',
+    backgroundColor: '#0f1013',
     autoHideMenuBar: true,
     title: '声绘 VoiceCanvas',
+    // 无边框 + 自定义标题栏（titleBarStyle hidden 保留系统阴影与窗口动画）
+    frame: false,
+    titleBarStyle: 'hidden',
     icon: path.join(process.env.VITE_DEV_SERVER_URL ? process.cwd() : __dirname, '../../build/icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -181,6 +184,16 @@ function registerIpc(): void {
     // 注意：这里必须调 ipcMain.handle，不能写成 handle（会无限递归）
     ipcMain.handle(channel, fn)
   }
+
+  // ===== 自定义标题栏的窗口控制 =====
+  handle(IPC.winMinimize, () => mainWindow?.minimize())
+  handle(IPC.winMaximize, () => {
+    if (mainWindow?.isMaximized()) mainWindow?.unmaximize()
+    else mainWindow?.maximize()
+    return mainWindow?.isMaximized()
+  })
+  handle(IPC.winClose, () => mainWindow?.close())
+  handle(IPC.winIsMaximized, () => mainWindow?.isMaximized())
 
   handle(IPC.settingsGet, () => getSettings())
   handle(IPC.settingsUpdate, (_e, patch) => updateSettings(patch))

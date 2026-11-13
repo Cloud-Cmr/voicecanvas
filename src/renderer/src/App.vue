@@ -13,6 +13,7 @@ import VoiceLibraryView from './views/VoiceLibraryView.vue'
 import HistoryView from './views/HistoryView.vue'
 import SettingsView from './views/SettingsView.vue'
 import { useShortcuts } from './composables/useShortcuts'
+import TitleBar from './components/TitleBar.vue'
 
 type TabKey =
   | 'synth'
@@ -101,6 +102,7 @@ async function onKeySaved() {
 
 <template>
   <div class="app-shell">
+    <TitleBar />
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">声</div>
@@ -226,23 +228,27 @@ async function onKeySaved() {
   display: flex;
   height: 100vh;
   background: var(--vc-bg-base);
+  /* 无边框窗口：标题栏高度 36px 由各栏自己留出 */
+  padding-top: 36px;
 }
 
+/* 侧边栏顶部 36px 是窗口拖拽区（标题栏延伸到侧边栏） */
 .sidebar {
   width: 224px;
   flex-shrink: 0;
   background: var(--vc-bg-panel);
-  border-right: 1px solid var(--vc-border);
+  border-right: 1px solid var(--vc-hairline);
   display: flex;
   flex-direction: column;
-  padding: 16px 12px;
+  padding: 0 12px 12px;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 8px 18px;
+  padding: 10px 8px 18px;
+  -webkit-app-region: drag; /* 品牌区也可拖动窗口 */
 }
 
 .brand-mark {
@@ -398,11 +404,21 @@ async function onKeySaved() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 32px 14px;
+  padding: 0 32px 14px;
+  /* 无边框窗口：顶栏上半段是窗口拖拽区 */
+  padding-top: 42px;
+  margin-top: -36px;
   border-bottom: 1px solid var(--vc-hairline);
   flex-shrink: 0;
+  -webkit-app-region: drag;
   /* 顶栏比内容区略亮一点，形成"光源在上"的层次 */
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent);
+}
+
+/* 顶栏内交互元素要脱离拖拽区 */
+.topbar :deep(.el-button),
+.topbar :deep(.status-dot) {
+  -webkit-app-region: no-drag;
 }
 
 .topbar-title {

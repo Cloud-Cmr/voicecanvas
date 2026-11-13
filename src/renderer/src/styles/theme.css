@@ -77,10 +77,9 @@
   --vc-gap-lg: 24px;
   --vc-gap-xl: 32px;
 
-  /* ── 字体 ──────────────────────────────────────────────
-     中文用系统无衬线的较新版本；数字与代码用等宽以便对齐。 */
-  --vc-font: 'Segoe UI Variable Display', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei',
-    system-ui, sans-serif;
+  /* ── 字体：MiSans（小米官方字体，与 MiMo 客户端同一族）── */
+  --vc-font: 'MiSans', 'Segoe UI Variable Display', 'Segoe UI', 'Microsoft YaHei UI',
+    'Microsoft YaHei', system-ui, sans-serif;
   --vc-font-mono: 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
 }
 
