@@ -12,6 +12,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { usePlayer } from '../composables/usePlayer'
 import Waveform from '../components/Waveform.vue'
+import { isWeb } from '../platform'
 
 const emit = defineEmits<{ (e: 'need-key'): void }>()
 
@@ -44,13 +45,25 @@ const muxing = ref(false)
 const player = usePlayer()
 const whisperState = ref<{ bin: boolean; model: boolean } | null>(null)
 
+/** 视频字幕配音依赖 Electron 主进程（ffmpeg / tesseract / 文件系统），浏览器与 APK 无此能力 */
+const unsupported = isWeb
+
 /** 退订时间轴合成进度 */
 let offTimelineProgress: (() => void) | null = null
 
 const hasSubs = computed(() => subtitles.value.length > 0)
 
 async function refreshWhisper() {
+  if (unsupported) return
   whisperState.value = await window.vc.whisper.status()
+}
+
+function guardDesktop() {
+  if (unsupported) {
+    ElMessage.warning('视频字幕配音依赖桌面版的 ffmpeg / OCR 能力，请在 Windows 客户端使用')
+    return false
+  }
+  return true
 }
 
 onMounted(async () => {
@@ -82,6 +95,7 @@ function fmtMs(ms: number) {
 
 // ===== 步骤 1a：OCR 模式 =====
 async function pickVideoAndOcr() {
+  if (!guardDesktop()) return
   const picked = await window.vc.video.pickOpen()
   if (!picked) return
   videoPath.value = picked.path
@@ -134,6 +148,7 @@ async function pickVideoAndOcr() {
 
 // ===== 步骤 1b：whisper 模式 =====
 async function pickVideoAndAsr() {
+  if (!guardDesktop()) return
   const picked = await window.vc.video.pickOpen()
   if (!picked) return
   videoPath.value = picked.path
@@ -228,6 +243,7 @@ async function downloadWhisperPart(kind: 'bin' | 'model') {
 
 // ===== 步骤 4：配音 + 混流 =====
 async function dub() {
+  if (!guardDesktop()) return
   if (!subtitles.value.length || !videoPath.value) return
   dubbing.value = true
   dubTotal.value = subtitles.value.length
@@ -265,6 +281,15 @@ async function dub() {
 
 <template>
   <div class="vc-page dub2-page">
+    <!-- 浏览器/APK 无 Electron 主进程能力 -->
+    <el-alert
+      v-if="unsupported"
+      type="warning"
+      :closable="false"
+      title="此功能仅在 Windows 桌面版可用"
+      description="视频字幕配音需要本机 ffmpeg、OCR 与文件读写能力，浏览器与手机端不具备。请使用 VoiceCanvas Windows 客户端。"
+      class="vc-web-alert"
+    />
     <!-- 步骤 1 -->
     <section class="vc-card">
       <h3 class="vc-card-title">① 导入视频并识别字幕</h3>
