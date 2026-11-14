@@ -46,6 +46,8 @@ import {
   downloadWhisperModel,
   transcribeLocal,
 } from './whisper'
+import { extractFrames, extractAudio, muxAudio, pickMuxExt } from './video'
+import { ocrFrames } from './ocr'
 import {
   listProjects,
   getProject,
@@ -536,6 +538,41 @@ function registerIpc(): void {
   })
   handle(IPC.whisperTranscribe, async (_e, payload: { audioPath: string; model: string }) => {
     return transcribeLocal(payload.audioPath, payload.model as any)
+  })
+
+  // ===== 视频字幕配音：抽帧 / 提取音轨 / OCR / 混流 =====
+  handle(IPC.videoPickOpen, async () => {
+    const res = await dialog.showOpenDialog({
+      title: '选择视频文件',
+      properties: ['openFile'],
+      filters: [{ name: '视频', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm'] }],
+    })
+    if (res.canceled || !res.filePaths[0]) return null
+    const p = res.filePaths[0]
+    return { path: p, name: path.basename(p) }
+  })
+
+  handle(IPC.videoExtractFrames, async (_e, videoPath: string, fps: number) => {
+    const dir = path.join(app.getPath('userData'), 'frames', randomUUID())
+    return extractFrames(videoPath, dir, fps)
+  })
+
+  handle(IPC.videoExtractAudio, async (_e, videoPath: string) => {
+    const out = path.join(app.getPath('userData'), 'frames', `${randomUUID()}.wav`)
+    await extractAudio(videoPath, out)
+    return { path: out }
+  })
+
+  handle(IPC.ocrFrames, async (_e, frames: Array<{ path: string; timeMs: number }>) => {
+    return ocrFrames(frames, undefined)
+  })
+
+  handle(IPC.videoMuxAudio, async (_e, videoPath: string, audioWav: string) => {
+    const dir = path.dirname(videoPath)
+    const base = path.basename(videoPath, path.extname(videoPath))
+    const out = path.join(dir, `${base}_配音${pickMuxExt(videoPath)}`)
+    await muxAudio(videoPath, audioWav, out)
+    return { path: out }
   })
 
   // ===== 项目工作区 =====

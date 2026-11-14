@@ -175,6 +175,18 @@ const api = {
     isMaximized: (): Promise<boolean | undefined> =>
       ipcRenderer.invoke(IPC.winIsMaximized),
   },
+  video: {
+    pickOpen: (): Promise<{ path: string; name: string } | null> =>
+      ipcRenderer.invoke(IPC.videoPickOpen),
+    extractFrames: (videoPath: string, fps: number): Promise<any> =>
+      ipcRenderer.invoke(IPC.videoExtractFrames, videoPath, fps),
+    extractAudio: (videoPath: string): Promise<{ path: string }> =>
+      ipcRenderer.invoke(IPC.videoExtractAudio, videoPath),
+    muxAudio: (videoPath: string, audioWav: string): Promise<{ path: string }> =>
+      ipcRenderer.invoke(IPC.videoMuxAudio, videoPath, audioWav),
+    ocrFrames: (frames: Array<{ path: string; timeMs: number }>): Promise<any[]> =>
+      ipcRenderer.invoke(IPC.ocrFrames, frames),
+  },
   whisper: {
     status: (): Promise<{ bin: boolean; model: boolean }> =>
       ipcRenderer.invoke(IPC.whisperStatus),

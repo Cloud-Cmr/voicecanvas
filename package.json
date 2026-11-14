@@ -1,7 +1,7 @@
 {
   "name": "voicecanvas",
-  "version": "0.8.1",
-  "description": "??? VoiceCanvas ???????AI ?????????????????? MiMo TTS",
+  "version": "0.8.2",
+  "description": "声绘 VoiceCanvas —— 桌面端 AI 语音工作台，首发适配小米 MiMo TTS",
   "private": true,
   "main": "./out/main/index.js",
   "author": "VoiceCanvas contributors",
@@ -13,12 +13,13 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:win": "node scripts/ensure-tessdata.cjs && electron-vite build && electron-builder --win",
     "build:mobile": "vite build --config vite.mobile.config.ts && node scripts/finalize-mobile.mjs",
     "apk": "npm run build:mobile && node scripts/prepare-apk.mjs && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
-    "electron-updater": "^6.6.2"
+    "electron-updater": "^6.6.2",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@capacitor/android": "^6.2.3",
@@ -38,7 +39,7 @@
   "build": {
     "appId": "com.voicecanvas.app",
     "productName": "VoiceCanvas",
-    "copyright": "Copyright ? 2026 VoiceCanvas contributors",
+    "copyright": "Copyright © 2026 VoiceCanvas contributors",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -70,11 +71,20 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "??? VoiceCanvas",
+      "shortcutName": "声绘 VoiceCanvas",
       "artifactName": "VoiceCanvas-${version}-Setup.${ext}"
     },
     "portable": {
       "artifactName": "VoiceCanvas-${version}-Portable.${ext}"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "tools/tessdata",
+        "to": "tessdata",
+        "filter": [
+          "*.gz"
+        ]
+      }
+    ]
   }
 }

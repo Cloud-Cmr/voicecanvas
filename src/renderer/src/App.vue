@@ -64,7 +64,7 @@ const navGroups: NavGroup[] = [
     items: [
       { key: 'transcript', label: '听写转写', desc: '音频转文字（ASR）' },
       { key: 'follow', label: '朗读跟读', desc: '听示范·录自己·对比' },
-      { key: 'dub', label: '视频字幕配音', desc: '识别字幕·按轴配音' },
+      { key: 'dub', label: '视频字幕配音', desc: 'OCR/听写识别字幕·按轴配音' },
     ],
   },
   {

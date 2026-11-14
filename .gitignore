@@ -64,3 +64,13 @@ coverage/
 tools/whisper/*.bin
 tools/whisper/*.zip
 whisper-rel*.json
+
+# OCR 语言包（约 30MB，打包时由 scripts/ensure-tessdata.cjs 自动下载）
+tools/tessdata/
+
+# 本地测试产物
+tools/e2e-frames/
+tools/test-frames/
+tools/*.mp4
+tools/*.wav
+tools/*.jpg
